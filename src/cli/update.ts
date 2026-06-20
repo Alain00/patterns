@@ -1,7 +1,7 @@
-import { GitSource } from "../registry/git-source.js";
-import { materialize } from "../artifact/materialize.js";
-import { writeRouter } from "../artifact/router.js";
-import { listInstalled } from "../registry/installed.js";
+import { GitSource } from "../registry/git-source";
+import { materialize } from "../artifact/materialize";
+import { writeRouter } from "../artifact/router";
+import { listInstalled } from "../registry/installed";
 
 /**
  * (v2) Refresh installed pattern(s) by re-resolving their source and

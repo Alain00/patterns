@@ -1,11 +1,11 @@
-import { init } from "./init.js";
-import { add } from "./add.js";
-import { list } from "./list.js";
-import { remove } from "./remove.js";
-import { validate } from "./validate.js";
-import { scan } from "./scan.js";
-import { find } from "./find.js";
-import { update } from "./update.js";
+import { init } from "./init";
+import { add } from "./add";
+import { list } from "./list";
+import { remove } from "./remove";
+import { validate } from "./validate";
+import { scan } from "./scan";
+import { find } from "./find";
+import { update } from "./update";
 
 const USAGE = `patterns — a registry for architecture patterns
 

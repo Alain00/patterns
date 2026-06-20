@@ -1,5 +1,5 @@
-import { parseArch } from "../core/parse.js";
-import { validatePattern } from "../core/validate.js";
+import { parseArch } from "../core/parse";
+import { validatePattern } from "../core/validate";
 
 /** Validate a pattern bundle: schema + rich-index integrity (all referenced files exist). */
 export function validate(path = process.cwd()): void {

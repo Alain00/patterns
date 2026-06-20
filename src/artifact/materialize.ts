@@ -1,7 +1,7 @@
 import { cpSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { INSTALL_DIR } from "../core/bundle.js";
-import type { Pattern } from "../core/schema.js";
+import { INSTALL_DIR } from "../core/bundle";
+import type { Pattern } from "../core/schema";
 
 /**
  * Write a pattern's knowledge bundle into a target project — DESCRIPTIVE ONLY.

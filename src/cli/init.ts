@@ -1,8 +1,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { BUNDLE_DIRS } from "../core/bundle.js";
-import { serializeArch } from "../core/parse.js";
-import type { Pattern } from "../core/schema.js";
+import { BUNDLE_DIRS } from "../core/bundle";
+import { serializeArch } from "../core/parse";
+import type { Pattern } from "../core/schema";
 
 /** Scaffold a new, empty pattern bundle directory ready for hand-authoring. */
 export function init(name: string, cwd = process.cwd()): void {

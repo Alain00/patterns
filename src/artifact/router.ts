@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { INSTALL_DIR, ROUTER_FILE } from "../core/bundle.js";
-import { listInstalled } from "../registry/installed.js";
+import { INSTALL_DIR, ROUTER_FILE } from "../core/bundle";
+import { listInstalled } from "../registry/installed";
 
 const MARKER_START = "<!-- patterns:start -->";
 const MARKER_END = "<!-- patterns:end -->";

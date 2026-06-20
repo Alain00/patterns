@@ -1,5 +1,5 @@
-import { unmaterialize } from "../artifact/remove.js";
-import { writeRouter } from "../artifact/router.js";
+import { unmaterialize } from "../artifact/remove";
+import { writeRouter } from "../artifact/router";
 
 /** Uninstall a pattern and refresh the router. */
 export function remove(name: string, cwd = process.cwd()): void {

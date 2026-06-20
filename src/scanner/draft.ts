@@ -1,4 +1,4 @@
-import type { Pattern } from "../core/schema.js";
+import type { Pattern } from "../core/schema";
 
 /**
  * Draft a pattern from an existing project.

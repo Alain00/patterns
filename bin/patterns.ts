@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { run } from "../src/cli/index.js";
+import { run } from "../src/cli/index";
 
 run(process.argv.slice(2)).catch((err: unknown) => {
   process.stderr.write(`${err instanceof Error ? err.message : String(err)}\n`);

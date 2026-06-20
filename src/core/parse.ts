@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { archYamlSchema, type Pattern } from "./schema.js";
+import { archYamlSchema, type Pattern } from "./schema";
 
 export const ARCH_FILE = "arch.yaml";
 

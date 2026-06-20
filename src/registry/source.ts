@@ -1,4 +1,4 @@
-import type { Pattern } from "../core/schema.js";
+import type { Pattern } from "../core/schema";
 
 /**
  * The seam that keeps distribution swappable (ADR-0001).

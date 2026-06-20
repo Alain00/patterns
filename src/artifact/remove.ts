@@ -1,6 +1,6 @@
 import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { INSTALL_DIR } from "../core/bundle.js";
+import { INSTALL_DIR } from "../core/bundle";
 
 /**
  * Uninstall a pattern: delete its bundle under .patterns/. The caller should

@@ -1,8 +1,8 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { INSTALL_DIR } from "../core/bundle.js";
-import { parseArch } from "../core/parse.js";
-import type { ArchYaml } from "../core/schema.js";
+import { INSTALL_DIR } from "../core/bundle";
+import { parseArch } from "../core/parse";
+import type { ArchYaml } from "../core/schema";
 
 export interface InstalledPattern {
   name: string;

@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { indexedPaths, type Pattern } from "./schema.js";
+import { indexedPaths, type Pattern } from "./schema";
 
 export interface Issue {
   level: "error" | "warning";

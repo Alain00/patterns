@@ -2,8 +2,8 @@ import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "bun:test";
-import { parseArch } from "../src/core/parse.js";
-import { validatePattern } from "../src/core/validate.js";
+import { parseArch } from "../src/core/parse";
+import { validatePattern } from "../src/core/validate";
 
 function bundle(arch: string, files: Record<string, string> = {}): string {
   const dir = mkdtempSync(join(tmpdir(), "patterns-"));

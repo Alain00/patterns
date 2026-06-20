@@ -1,4 +1,4 @@
-import { search } from "../registry/catalog.js";
+import { search } from "../registry/catalog";
 
 /** (v2) Search the patterns.directory catalog. */
 export function find(query: string): void {

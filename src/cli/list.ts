@@ -1,4 +1,4 @@
-import { listInstalled } from "../registry/installed.js";
+import { listInstalled } from "../registry/installed";
 
 /** List the patterns installed in the current project. */
 export function list(cwd = process.cwd()): void {
