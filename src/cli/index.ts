@@ -6,6 +6,7 @@ import { validate } from "./validate";
 import { scan } from "./scan";
 import { find } from "./find";
 import { update } from "./update";
+import { publishCmd } from "./publish";
 
 const USAGE = `patterns — a registry for architecture patterns
 
@@ -22,6 +23,8 @@ v2
   scan [path]        draft a pattern from an existing codebase
   find <query>       search the patterns.directory catalog
   update [name]      refresh installed pattern(s)
+  publish [ref]      register a pattern in the patterns.directory index
+                     (ref inferred from the current git repo when omitted)
 `;
 
 export async function run(argv: string[]): Promise<void> {
@@ -48,6 +51,8 @@ export async function run(argv: string[]): Promise<void> {
       return find(args[0]!);
     case "update":
       return update(args[0]);
+    case "publish":
+      return publishCmd(args[0]);
     case undefined:
     case "-h":
     case "--help":

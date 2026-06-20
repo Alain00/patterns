@@ -20,7 +20,15 @@ The layer that materializes a pattern *into* a target project — creates the fo
 _Avoid_: using "artifact" to mean the pattern bundle itself (that's a Pattern)
 
 **Registry**:
-The layer that moves patterns between the local machine and the wider ecosystem. Two concerns, split deliberately (see [[ADR-0001]]): **distribution** (`add`/`update`) is git-native with no backend — resolve a ref like `owner/repo` straight from git; **discovery** (`find`) is a thin client to a hosted search API at patterns.directory. A discovery result's `ref` feeds straight back into git-native `add`.
+The layer that moves patterns between the local machine and the wider ecosystem. Two concerns, split deliberately (see [[ADR-0001]]): **distribution** (`add`/`update`) is git-native with no backend — resolve a ref like `owner/repo` straight from git; **discovery** (`find`/`publish`) is a thin client to a hosted API at patterns.directory. A discovery result's `ref` feeds straight back into git-native `add`.
+
+**Publish**:
+Registering a pattern in the hosted index so it's discoverable via `find`. `patterns publish [ref]` POSTs only the ref; the server fetches and validates the pattern's `patterns.yaml` from the ref itself and upserts a derived row. The ref is optional — when omitted it's inferred from the current git repo (`origin` remote + the `patterns.yaml` location). Distribution stays git-native — the index is a cache, never the source of truth, and publish is not how a pattern is installed.
+_Avoid_: treating publish as uploading the pattern (no content is sent), or as a precondition for `add`.
+
+**Install telemetry**:
+A best-effort popularity ping the CLI sends after a successful `add` (`POST /api/installs`), so server-side ranking has install counts. Strictly off the critical path: it can never fail or slow `add`. On by default, opt out with `PATTERNS_TELEMETRY=0`.
+_Avoid_: making install depend on it, or treating a failed/blocked ping as an install error.
 
 **AGENTS.md (router)**:
 A file written at the project root when a pattern is installed. It does not contain the architecture; it *routes* — pointing the agent to the installed pattern(s) under `.patterns/` and their `patterns.yaml`. The agent's entry point into a project's patterns.

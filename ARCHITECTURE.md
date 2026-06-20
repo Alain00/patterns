@@ -25,7 +25,11 @@ patterns/
 │   ├── registry/              # transport: git-native, no backend
 │   │   ├── source.ts          # PatternSource interface (GitSource now, ApiSource later)
 │   │   ├── git-source.ts      # resolve user/repo → fetched bundle
-│   │   ├── catalog.ts         # search the static patterns.directory index   (v2)
+│   │   ├── catalog.ts         # search the patterns.directory index           (v2)
+│   │   ├── publish.ts         # POST a ref to the index to register a pattern (v2)
+│   │   ├── detect-ref.ts      # infer owner/repo[/sub] from the current repo  (v2)
+│   │   ├── telemetry.ts       # opt-out install ping after `add`              (v2)
+│   │   ├── ref.ts             # client mirror of the server's ref parser
 │   │   └── installed.ts       # read patterns installed in the current repo
 │   ├── artifact/              # pattern → project files (descriptive only)
 │   │   ├── materialize.ts     # write .patterns/<name>/ into target project
@@ -33,7 +37,7 @@ patterns/
 │   │   └── remove.ts          # delete bundle + clean router entry
 │   └── cli/                   # one file per command, wires layers together
 │       ├── init.ts  add.ts  list.ts  remove.ts  validate.ts      # v1
-│       └── scan.ts  find.ts  update.ts                           # v2
+│       └── scan.ts  find.ts  update.ts  publish.ts               # v2
 └── tests/
 ```
 
@@ -69,7 +73,11 @@ draft(projectDir: string): Pattern                 // empty summaries + AGENTS.m
 interface PatternSource { resolve(ref: string): Promise<Pattern> }  // ADR-0001
 class GitSource implements PatternSource { /* user/repo → bundle */ }
 listInstalled(projectDir: string): InstalledPattern[]
-search(query: string): CatalogEntry[]              // v2, static catalog
+search(query: string): CatalogEntry[]              // v2, hosted catalog
+publish(ref: string): Promise<PublishResult>       // v2, register in hosted index
+detectRef(cwd?: string): Promise<string>           // v2, infer ref from current git repo
+pingInstall(ref: string): Promise<void>            // v2, opt-out install telemetry (best-effort)
+parseRef(ref: string): ParsedRef | null            // client mirror of the server's ref rules
 ```
 
 ### artifact
@@ -91,6 +99,10 @@ unmaterialize(name: string, projectDir: string): void
 | `scan <path>`     | v2 | scanner.draft → core.serializeManifest |
 | `find <query>`    | v2 | registry.search |
 | `update [name]`   | v2 | registry.resolve → artifact.materialize (re-write) |
+| `publish [ref]`   | v2 | registry.detectRef (when ref omitted) → registry.publish (POST /api/patterns) |
+
+`add` also fires `registry.pingInstall` after a successful install — a best-effort,
+opt-out (`PATTERNS_TELEMETRY=0`) popularity ping that never blocks or breaks install.
 
 ## Pattern bundle (the unit on disk)
 
