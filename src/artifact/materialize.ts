@@ -10,7 +10,7 @@ import type { Pattern } from "../core/schema";
  * Returns the install path. Caller is responsible for (re)writing the router.
  */
 export function materialize(pattern: Pattern, projectDir: string): string {
-  const dest = join(projectDir, INSTALL_DIR, pattern.arch.name);
+  const dest = join(projectDir, INSTALL_DIR, pattern.manifest.name);
   mkdirSync(join(projectDir, INSTALL_DIR), { recursive: true });
   cpSync(pattern.root, dest, { recursive: true });
   return dest;

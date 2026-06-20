@@ -2,7 +2,7 @@
  * The pattern bundle model — the unit on disk.
  *
  *   <name>/
- *   ├── arch.yaml      only structured file; identity + rich index
+ *   ├── patterns.yaml  only structured file; identity + rich index
  *   ├── README.md      for humans: what it is, trade-offs, how to use
  *   ├── AGENTS.md      for agents: how to use/extend this pattern
  *   ├── structure/     describe
@@ -12,7 +12,7 @@
  */
 
 export const BUNDLE_DIRS = ["structure", "rules", "recipes", "adrs"] as const;
-export const BUNDLE_FILES = ["arch.yaml", "README.md", "AGENTS.md"] as const;
+export const BUNDLE_FILES = ["patterns.yaml", "README.md", "AGENTS.md"] as const;
 
 /** Where installed patterns live inside a target project. */
 export const INSTALL_DIR = ".patterns";

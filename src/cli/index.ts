@@ -16,7 +16,7 @@ v1
   add <ref>          fetch a pattern from a git ref and install it (descriptive only)
   list               list patterns installed in this project
   remove <name>      uninstall a pattern
-  validate [path]    check arch.yaml + that the rich index matches real files
+  validate [path]    check patterns.yaml + that the rich index matches real files
 
 v2
   scan [path]        draft a pattern from an existing codebase

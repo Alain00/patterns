@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join, resolve as resolvePath } from "node:path";
 import { $ } from "bun";
 import type { PatternSource } from "./source";
-import { parseArch } from "../core/parse";
+import { MANIFEST_FILE, parseManifest } from "../core/parse";
 import type { Pattern } from "../core/schema";
 
 /**
@@ -17,7 +17,14 @@ import type { Pattern } from "../core/schema";
  */
 export type ParsedRef =
   | { kind: "local"; dir: string }
-  | { kind: "git"; host: string; owner: string; repo: string; subdir: string; gitRef?: string };
+  | {
+      kind: "git";
+      host: string;
+      owner: string;
+      repo: string;
+      subdir: string;
+      gitRef?: string;
+    };
 
 const DEFAULT_HOST = "github.com";
 
@@ -38,7 +45,9 @@ export function parseRef(ref: string): ParsedRef {
   const [owner, repo, ...rest] = segments;
 
   if (!owner || !repo) {
-    throw new Error(`invalid pattern ref "${ref}" — expected owner/repo[/subdir][#ref] or a local path`);
+    throw new Error(
+      `invalid pattern ref "${ref}" — expected owner/repo[/subdir][#ref] or a local path`,
+    );
   }
 
   return { kind: "git", host, owner, repo, subdir: rest.join("/"), gitRef };
@@ -48,7 +57,7 @@ export function parseRef(ref: string): ParsedRef {
 export class GitSource implements PatternSource {
   async resolve(ref: string): Promise<Pattern> {
     const parsed = parseRef(ref);
-    if (parsed.kind === "local") return parseArch(parsed.dir);
+    if (parsed.kind === "local") return parseManifest(parsed.dir);
 
     const dest = mkdtempSync(join(tmpdir(), "patterns-clone-"));
     const url = `https://${parsed.host}/${parsed.owner}/${parsed.repo}.git`;
@@ -58,12 +67,12 @@ export class GitSource implements PatternSource {
     rmSync(join(dest, ".git"), { recursive: true, force: true });
 
     const bundleDir = parsed.subdir ? join(dest, parsed.subdir) : dest;
-    if (!existsSync(join(bundleDir, "arch.yaml"))) {
+    if (!existsSync(join(bundleDir, MANIFEST_FILE))) {
       throw new Error(
-        `no arch.yaml found at ${parsed.owner}/${parsed.repo}${parsed.subdir ? "/" + parsed.subdir : ""}`,
+        `no ${MANIFEST_FILE} found at ${parsed.owner}/${parsed.repo}${parsed.subdir ? "/" + parsed.subdir : ""}`,
       );
     }
-    return parseArch(bundleDir);
+    return parseManifest(bundleDir);
   }
 }
 
@@ -72,7 +81,11 @@ export class GitSource implements PatternSource {
  * for branches/tags); if that fails the ref is likely a commit SHA, so we fall
  * back to a full clone + checkout.
  */
-async function clone(url: string, gitRef: string | undefined, dest: string): Promise<void> {
+async function clone(
+  url: string,
+  gitRef: string | undefined,
+  dest: string,
+): Promise<void> {
   try {
     const branchArgs = gitRef ? ["--branch", gitRef] : [];
     await $`git clone --depth 1 ${branchArgs} ${url} ${dest}`.quiet();
@@ -98,5 +111,7 @@ function cloneError(url: string, err: unknown): Error {
 
 function splitOnce(value: string, sep: string): [string, string | undefined] {
   const i = value.indexOf(sep);
-  return i === -1 ? [value, undefined] : [value.slice(0, i), value.slice(i + sep.length)];
+  return i === -1
+    ? [value, undefined]
+    : [value.slice(0, i), value.slice(i + sep.length)];
 }

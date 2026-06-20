@@ -13,15 +13,15 @@ patterns/
 ├── bin/
 │   └── patterns.ts            # CLI entry, arg parsing → src/cli
 ├── src/
-│   ├── core/                  # the arch.yaml contract — depended on by every layer
-│   │   ├── schema.ts          # arch.yaml type + validator (zod)
-│   │   ├── parse.ts           # read/serialize arch.yaml
+│   ├── core/                  # the patterns.yaml contract — depended on by every layer
+│   │   ├── schema.ts          # patterns.yaml type + validator (zod)
+│   │   ├── parse.ts           # read/serialize patterns.yaml
 │   │   ├── bundle.ts          # Pattern bundle model (.patterns/<name>/ tree)
 │   │   └── validate.ts        # index-vs-files drift check (rich-index integrity)
 │   ├── scanner/               # project → draft pattern   (authoring, v2)
 │   │   ├── detect.ts          # stack/framework detection from package.json, conventions
 │   │   ├── inventory.ts       # walk tree → folder map
-│   │   └── draft.ts           # emit draft arch.yaml (empty summaries) + agent-fill instruction
+│   │   └── draft.ts           # emit draft patterns.yaml (empty summaries) + agent-fill instruction
 │   ├── registry/              # transport: git-native, no backend
 │   │   ├── source.ts          # PatternSource interface (GitSource now, ApiSource later)
 │   │   ├── git-source.ts      # resolve user/repo → fetched bundle
@@ -43,17 +43,17 @@ Signatures are the contract; bodies are out of scope for this pass.
 
 ### core
 ```ts
-type ArchYaml = {
+type PatternManifest = {
   name: string; version: string; description: string; stack: string[];
   structure: { path: string; is: string }[];      // rich index — see ADR-0002
   rules:     { path: string; enforces: string }[];
   recipes:   { path: string; when: string }[];
   adrs:      { path: string; decides: string }[];
 };
-type Pattern = { arch: ArchYaml; root: string };   // root = bundle dir on disk
+type Pattern = { manifest: PatternManifest; root: string };   // root = bundle dir on disk
 
-parseArch(dir: string): Pattern
-serializeArch(p: Pattern): void
+parseManifest(dir: string): Pattern
+serializeManifest(p: Pattern): void
 validatePattern(p: Pattern): Issue[]               // schema + every index path exists
 ```
 
@@ -88,7 +88,7 @@ unmaterialize(name: string, projectDir: string): void
 | `list`            | v1 | registry.listInstalled |
 | `remove <name>`   | v1 | artifact.unmaterialize |
 | `validate [path]` | v1 | core.validatePattern |
-| `scan <path>`     | v2 | scanner.draft → core.serializeArch |
+| `scan <path>`     | v2 | scanner.draft → core.serializeManifest |
 | `find <query>`    | v2 | registry.search |
 | `update [name]`   | v2 | registry.resolve → artifact.materialize (re-write) |
 
@@ -96,7 +96,7 @@ unmaterialize(name: string, projectDir: string): void
 
 ```
 <name>/
-├── arch.yaml        # only structured file; identity + rich index (ADR-0002)
+├── patterns.yaml        # only structured file; identity + rich index (ADR-0002)
 ├── README.md        # for humans: what it is, trade-offs, how to use
 ├── AGENTS.md        # for agents: how to use/extend this pattern
 ├── structure/       # describe — domain.md, schema.md, …
