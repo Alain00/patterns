@@ -1,0 +1,32 @@
+{
+  "name": "patterns",
+  "version": "0.0.0",
+  "description": "A CLI and registry for distributable architecture patterns — the folder structure and architecture that lives in it, packaged for humans and coding agents.",
+  "type": "module",
+  "module": "bin/patterns.ts",
+  "bin": {
+    "patterns": "./bin/patterns.ts"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "scripts": {
+    "dev": "bun bin/patterns.ts",
+    "start": "bun bin/patterns.ts",
+    "build": "bun build bin/patterns.ts --compile --outfile dist/patterns",
+    "test": "bun test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "engines": {
+    "bun": ">=1.1"
+  },
+  "dependencies": {
+    "yaml": "^2.4.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.6",
+    "typescript": "^5.5.0"
+  }
+}
