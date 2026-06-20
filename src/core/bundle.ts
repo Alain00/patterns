@@ -17,6 +17,9 @@ export const BUNDLE_FILES = ["patterns.yaml", "README.md", "AGENTS.md"] as const
 /** Where installed patterns live inside a target project. */
 export const INSTALL_DIR = ".patterns";
 
+/** Sidecar inside an installed bundle recording the ref it was installed from (for `update`). */
+export const ORIGIN_FILE = ".origin";
+
 /** The agent's entry point, written at the target project root. */
 export const ROUTER_FILE = "AGENTS.md";
 

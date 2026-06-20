@@ -20,7 +20,7 @@ The layer that materializes a pattern *into* a target project — creates the fo
 _Avoid_: using "artifact" to mean the pattern bundle itself (that's a Pattern)
 
 **Registry**:
-The layer that transports patterns between the local machine and the remote index (patterns.directory) — fetch/resolve a pattern by name, and publish a pattern. Indexes patterns by reading their `patterns.yaml`.
+The layer that moves patterns between the local machine and the wider ecosystem. Two concerns, split deliberately (see [[ADR-0001]]): **distribution** (`add`/`update`) is git-native with no backend — resolve a ref like `owner/repo` straight from git; **discovery** (`find`) is a thin client to a hosted search API at patterns.directory. A discovery result's `ref` feeds straight back into git-native `add`.
 
 **AGENTS.md (router)**:
 A file written at the project root when a pattern is installed. It does not contain the architecture; it *routes* — pointing the agent to the installed pattern(s) under `.patterns/` and their `patterns.yaml`. The agent's entry point into a project's patterns.

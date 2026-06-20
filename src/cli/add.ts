@@ -1,6 +1,6 @@
 import { GitSource } from "../registry/git-source";
 import { validatePattern } from "../core/validate";
-import { materialize } from "../artifact/materialize";
+import { materialize, writeOrigin } from "../artifact/materialize";
 import { writeRouter } from "../artifact/router";
 
 /** Fetch a pattern from a git ref and materialize it into the current project (descriptive only). */
@@ -16,6 +16,7 @@ export async function add(ref: string, cwd = process.cwd()): Promise<void> {
   }
 
   const dest = materialize(pattern, cwd);
+  writeOrigin(pattern.manifest.name, ref, cwd);
   writeRouter(cwd);
   console.log(`installed pattern "${pattern.manifest.name}" → ${dest}`);
 }
