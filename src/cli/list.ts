@@ -8,6 +8,6 @@ export function list(cwd = process.cwd()): void {
     return;
   }
   for (const p of installed) {
-    console.log(`${p.name}@${p.version} — ${p.arch.description}`);
+    console.log(`${p.name}@${p.version} — ${p.manifest.description}`);
   }
 }

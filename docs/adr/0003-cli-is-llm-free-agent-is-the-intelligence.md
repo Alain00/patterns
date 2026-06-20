@@ -2,7 +2,7 @@
 
 `patterns` contains no LLM and requires no API key. It is deterministic plumbing that produces and moves structured files; the *user's own coding agent* supplies all intelligence. This shows up consistently across the tool:
 
-- **Authoring** (`scan`): the Scanner does only static work (walk tree, detect stack, inventory folders) and emits a draft `arch.yaml` with empty summaries plus an instruction for the user's agent to fill the prose. It does not call a model.
+- **Authoring** (`scan`): the Scanner does only static work (walk tree, detect stack, inventory folders) and emits a draft `patterns.yaml` with empty summaries plus an instruction for the user's agent to fill the prose. It does not call a model.
 - **Consumption**: installing a pattern writes passive files (`AGENTS.md` + `.patterns/`) that the agent reads on its own. There is no runtime `use` command and no prompt-composition step.
 
 We chose this over embedding an LLM (which would give richer one-shot `scan` output and an active `use`) because it keeps the CLI free, offline, deterministic, and dependency-light, and because the target user *already has* a capable agent — the tool's job is to give that agent the structured map it lacks, not to be a second agent. The intelligence lives where the user already pays for it.

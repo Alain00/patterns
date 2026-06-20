@@ -8,7 +8,7 @@ const MARKER_END = "<!-- patterns:end -->";
 
 /**
  * (Re)write the root AGENTS.md router. The router does NOT contain the
- * architecture — it points the agent at each installed pattern's arch.yaml,
+ * architecture — it points the agent at each installed pattern's patterns.yaml,
  * which is the agent's first read (progressive disclosure).
  */
 export function writeRouter(projectDir: string): void {
@@ -19,10 +19,10 @@ export function writeRouter(projectDir: string): void {
     "# Project patterns",
     "",
     "This project uses architecture patterns installed by `patterns`.",
-    "Read the relevant `arch.yaml` FIRST to learn where code goes before writing any.",
+    "Read the relevant `patterns.yaml` FIRST to learn where code goes before writing any.",
     "",
     ...installed.map(
-      (p) => `- **${p.name}** — ${p.arch.description}\n  Index: \`${INSTALL_DIR}/${p.name}/arch.yaml\``,
+      (p) => `- **${p.name}** — ${p.manifest.description}\n  Index: \`${INSTALL_DIR}/${p.name}/patterns.yaml\``,
     ),
     MARKER_END,
   ];

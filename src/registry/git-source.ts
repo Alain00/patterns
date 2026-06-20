@@ -6,12 +6,12 @@ import type { Pattern } from "../core/schema.js";
  * A ref looks like "user/repo" or "user/repo/subdir" (or a bare local path).
  *
  * Strategy (to implement): shallow-fetch the repo into a cache dir, locate the
- * bundle (arch.yaml at the resolved subdir), and parseArch it.
+ * bundle (patterns.yaml at the resolved subdir), and parseManifest it.
  */
 export class GitSource implements PatternSource {
   async resolve(_ref: string): Promise<Pattern> {
     // TODO(v1): parse ref → host/owner/repo/subdir; shallow clone to cache;
-    //           return parseArch(<cache>/<subdir>).
+    //           return parseManifest(<cache>/<subdir>).
     throw new Error("GitSource.resolve not implemented");
   }
 }

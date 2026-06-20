@@ -1,13 +1,13 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { INSTALL_DIR } from "../core/bundle.js";
-import { parseArch } from "../core/parse.js";
-import type { ArchYaml } from "../core/schema.js";
+import { parseManifest } from "../core/parse.js";
+import type { PatternManifest } from "../core/schema.js";
 
 export interface InstalledPattern {
   name: string;
   version: string;
-  arch: ArchYaml;
+  manifest: PatternManifest;
   path: string;
 }
 
@@ -21,10 +21,10 @@ export function listInstalled(projectDir: string): InstalledPattern[] {
     if (!entry.isDirectory()) continue;
     const dir = join(base, entry.name);
     try {
-      const { arch } = parseArch(dir);
-      out.push({ name: arch.name, version: arch.version, arch, path: dir });
+      const { manifest } = parseManifest(dir);
+      out.push({ name: manifest.name, version: manifest.version, manifest, path: dir });
     } catch {
-      // skip directories without a valid arch.yaml
+      // skip directories without a valid patterns.yaml
     }
   }
   return out;

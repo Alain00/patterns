@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { BUNDLE_DIRS } from "../core/bundle.js";
-import { serializeArch } from "../core/parse.js";
+import { serializeManifest } from "../core/parse.js";
 import type { Pattern } from "../core/schema.js";
 
 /** Scaffold a new, empty pattern bundle directory ready for hand-authoring. */
@@ -12,7 +12,7 @@ export function init(name: string, cwd = process.cwd()): void {
 
   const pattern: Pattern = {
     root,
-    arch: {
+    manifest: {
       name,
       version: "0.1.0",
       description: "TODO: one line — what this pattern is and when to use it",
@@ -23,7 +23,7 @@ export function init(name: string, cwd = process.cwd()): void {
       adrs: [],
     },
   };
-  serializeArch(pattern);
+  serializeManifest(pattern);
 
   writeFileSync(join(root, "README.md"), `# ${name}\n\nTODO: what it is, trade-offs, how to use.\n`);
   writeFileSync(join(root, "AGENTS.md"), `# ${name} — for agents\n\nTODO: how to use and extend this pattern.\n`);
