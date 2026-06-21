@@ -59,7 +59,13 @@ export function isTestFile(path: string, extraDirs?: Iterable<string>): boolean 
   return parts.slice(0, -1).some((seg) => dirs.has(seg.toLowerCase()));
 }
 
-/** Simple .gitignore matcher: bare names, trailing-slash dirs, leading "*." globs. */
+/**
+ * Simple .gitignore matcher — by path-segment NAME only, not full git semantics. A
+ * leading "/" (anchor) and a trailing "/" (dir marker) are treated as cosmetic and
+ * stripped, so both "/build/" and "build" ignore ANY segment named "build" at any depth
+ * (root-anchoring is not honored). Supports bare names, those slash-wrapped names, and
+ * "*.ext" extension globs.
+ */
 interface IgnoreRules {
   names: Set<string>; // bare name or trailing-slash dir → match any segment
   extGlobs: Set<string>; // "*.log" → ".log" suffix match on basenames
@@ -77,7 +83,9 @@ function loadIgnore(projectDir: string): IgnoreRules {
   for (const line of raw.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("!")) continue;
-    // Strip git anchoring/dir markers so "/.next/" and "coverage/" match the segment name.
+    // Strip the leading "/" anchor and trailing "/" dir marker — both cosmetic here:
+    // matching is by segment name at any depth, so "/.next/" and "coverage/" both
+    // ignore any segment of that name (see the matcher doc above).
     const cleaned = trimmed.replace(/^\/+/, "").replace(/\/+$/, "");
     if (cleaned.startsWith("*.")) {
       extGlobs.add(cleaned.slice(1)); // "*.log" → ".log"

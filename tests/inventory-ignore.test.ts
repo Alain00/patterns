@@ -14,7 +14,7 @@ function project(files: Record<string, string>): string {
 }
 
 describe("inventory ignore rules", () => {
-  it("always skips framework build dirs (.next) and honors /-anchored gitignore patterns", () => {
+  it("always skips framework build dirs (.next) and applies .gitignore segment names (leading / is cosmetic)", () => {
     const dir = project({
       ".gitignore": "/generated/\n",
       "src/app.ts": "export const x = 1;",
@@ -24,6 +24,6 @@ describe("inventory ignore rules", () => {
     const files = listFiles(dir);
     expect(files).toContain("src/app.ts");
     expect(files.some((f) => f.startsWith(".next/"))).toBe(false); // ALWAYS_SKIP
-    expect(files.some((f) => f.startsWith("generated/"))).toBe(false); // "/generated/" now honored
+    expect(files.some((f) => f.startsWith("generated/"))).toBe(false); // "/generated/" → segment "generated" ignored (leading / cosmetic)
   });
 });

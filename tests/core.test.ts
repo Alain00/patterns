@@ -39,6 +39,13 @@ describe("core", () => {
     expect(issues.some((i) => i.message.includes("structure/domain.md"))).toBe(true);
   });
 
+  it("rejects a rich-index path that points at a directory, not a file", () => {
+    const dir = bundle(MANIFEST);
+    mkdirSync(join(dir, "structure", "domain.md"), { recursive: true }); // a DIR where a doc is expected
+    const issues = validatePattern(parseManifest(dir));
+    expect(issues.some((i) => i.message.includes("structure/domain.md") && i.message.includes("directory"))).toBe(true);
+  });
+
   it("rejects a rich-index path that escapes its section / the bundle", () => {
     const escape = `
 name: evil

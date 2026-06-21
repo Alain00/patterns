@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { BUNDLE_FILES } from "./bundle";
 import type { Pattern } from "./schema";
@@ -51,10 +51,16 @@ export function validatePattern(pattern: Pattern): Issue[] {
         issues.push({ level: "error", message: `patterns.yaml: "${rel}" ${bad}` });
         continue;
       }
-      if (!existsSync(join(pattern.root, rel))) {
+      const abs = join(pattern.root, rel);
+      if (!existsSync(abs)) {
         issues.push({
           level: "error",
           message: `patterns.yaml references "${rel}" but the file is missing`,
+        });
+      } else if (!statSync(abs).isFile()) {
+        issues.push({
+          level: "error",
+          message: `patterns.yaml references "${rel}" but it is a directory, not a file`,
         });
       }
     }

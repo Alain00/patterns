@@ -161,14 +161,29 @@ function resolveWorkspace(
   packages: Map<string, WorkspacePkg>,
   nodes: Set<string>,
 ): string | null {
-  for (const [name, p] of packages) {
-    if (source === name) return resolveEntry(p, nodes);
-    if (source.startsWith(`${name}/`)) {
-      const sub = source.slice(name.length + 1);
-      return tryResolve(underBase(p.dir, sub), nodes) ?? tryResolve(underBase(p.dir, `src/${sub}`), nodes);
-    }
+  // Exact package import — direct lookup, no scan.
+  const exact = packages.get(source);
+  if (exact) return resolveEntry(exact, nodes);
+
+  // Subpath import ("@scope/pkg/sub" or "pkg/sub"): an npm package name is at most
+  // "@scope/pkg" (one slash) or "pkg" (none), so the package prefix is fixed-length —
+  // derive it and look it up directly instead of scanning every package (O(1) per import).
+  const slash = source.indexOf("/");
+  if (slash < 0) return null;
+  let pkgName: string;
+  let sub: string;
+  if (source.startsWith("@")) {
+    const second = source.indexOf("/", slash + 1);
+    if (second < 0) return null; // "@scope" with no package part
+    pkgName = source.slice(0, second);
+    sub = source.slice(second + 1);
+  } else {
+    pkgName = source.slice(0, slash);
+    sub = source.slice(slash + 1);
   }
-  return null;
+  const p = packages.get(pkgName);
+  if (!p) return null;
+  return tryResolve(underBase(p.dir, sub), nodes) ?? tryResolve(underBase(p.dir, `src/${sub}`), nodes);
 }
 
 /**
