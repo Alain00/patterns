@@ -53,7 +53,7 @@ export function parseRef(ref: string): ParsedRef {
   return { kind: "git", host, owner, repo, subdir: rest.join("/"), gitRef };
 }
 
-/** Git-native resolution (ADR-0001): patterns live in git repos, no backend. */
+/** Git-native resolution: patterns live in git repos, no backend. */
 export class GitSource implements PatternSource {
   async resolve(ref: string): Promise<Pattern> {
     const parsed = parseRef(ref);

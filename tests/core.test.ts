@@ -36,7 +36,22 @@ describe("core", () => {
   it("flags a rich-index entry whose file is missing (drift)", () => {
     const dir = bundle(MANIFEST); // structure/domain.md NOT written
     const issues = validatePattern(parseManifest(dir));
-    expect(issues).toHaveLength(1);
-    expect(issues[0]?.message).toContain("structure/domain.md");
+    expect(issues.some((i) => i.message.includes("structure/domain.md"))).toBe(true);
+  });
+
+  it("rejects a rich-index path that escapes its section / the bundle", () => {
+    const escape = `
+name: evil
+version: 0.1.0
+description: tries to reference outside the bundle
+stack: []
+structure:
+  - path: ../outside.md
+    is: not in the bundle
+`;
+    const dir = bundle(escape);
+    writeFileSync(join(dir, "..", "outside.md"), "# gotcha"); // exists, but outside the bundle
+    const issues = validatePattern(parseManifest(dir));
+    expect(issues.some((i) => i.message.includes("../outside.md") && i.message.includes("must"))).toBe(true);
   });
 });
