@@ -4,12 +4,27 @@ A CLI and registry for distributable **architecture patterns** — bundles that 
 
 The CLI is LLM-free and deterministic; your coding agent supplies the intelligence.
 
-## Run
+## Install
 
-Built for [Bun](https://bun.sh) (`engines.bun >= 1.1`):
+Built for [Bun](https://bun.sh) (`engines.bun >= 1.1`). The CLI is distributed git-native — clone it and link once for a global `patterns` on your PATH:
 
 ```sh
-bun bin/patterns.ts <command>      # or `bun link` for a global `patterns`
+git clone <repo> && cd patterns
+bun install
+bun link                           # exposes `patterns` globally
+```
+
+## Use
+
+```sh
+patterns <command>                 # e.g. patterns scan .
+patterns <command> --help          # a command's options and defaults
+```
+
+## Develop
+
+```sh
+bun bin/patterns.ts <command>      # run from a clone without linking
 bun test                           # run the test suite
 bun run typecheck                  # tsc --noEmit
 ```

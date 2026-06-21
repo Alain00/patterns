@@ -29,12 +29,12 @@ describe("buildGraph", () => {
     // README.md is unsupported -> dropped from the node set.
     expect(graph.files.sort()).toEqual(["a.ts", "b.ts", "c.ts"]);
 
-    // a -> b via the import and/or the def/ref name edge.
-    expect(graph.edges.get("a.ts")?.has("b.ts")).toBe(true);
+    // a -> b via the resolved import edge.
+    expect(graph.importEdges.get("a.ts")?.has("b.ts")).toBe(true);
 
     // c is unrelated: no outgoing edges, and nobody points at it.
-    expect(graph.edges.get("c.ts") ?? new Set()).toEqual(new Set());
-    for (const set of graph.edges.values()) expect(set.has("c.ts")).toBe(false);
+    expect(graph.importEdges.get("c.ts") ?? new Set()).toEqual(new Set());
+    for (const set of graph.importEdges.values()) expect(set.has("c.ts")).toBe(false);
 
     // tags populated for every node.
     expect(graph.tags.size).toBe(3);
@@ -48,6 +48,6 @@ describe("buildGraph", () => {
     const dir = mkdtempSync(join(tmpdir(), "patterns-graph-bare-"));
     writeFileSync(join(dir, "x.ts"), `import { Injectable } from "@nestjs/common";\n`);
     const graph = await buildGraph(dir, ["x.ts"]);
-    expect(graph.edges.get("x.ts") ?? new Set()).toEqual(new Set());
+    expect(graph.importEdges.get("x.ts") ?? new Set()).toEqual(new Set());
   });
 });

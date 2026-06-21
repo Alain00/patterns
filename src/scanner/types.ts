@@ -4,7 +4,7 @@
  * These types are the pinned interface every scanner module builds against:
  * `lang.ts` produces Tags, `graph.ts` builds a FileGraph, `pagerank.ts` ranks it,
  * `inventory.ts` produces the FolderNode tree + Conventions, and `map.ts` assembles
- * the ScanFindings artifact emitted by `patterns scan --json`.
+ * the ScanFindings artifact emitted as JSON by `patterns scan`.
  */
 
 /** A def or ref symbol extracted from a source file by tree-sitter (Aider's Tag). */
@@ -37,13 +37,12 @@ export interface Convention {
 }
 
 /**
- * Directed file→file graph. `edges.get(a)` = files that `a` references or imports.
+ * Directed file→file import graph. `importEdges.get(a)` = files that `a` imports.
  * `tags.get(f)` = the symbols defined/referenced in `f`.
  */
 export interface FileGraph {
   files: string[]; // relative paths, the node set
-  edges: Map<string, Set<string>>; // imports ∪ name-refs — for PageRank importance ranking
-  importEdges?: Map<string, Set<string>>; // imports only — for the detectors (cycles/boundaries) and PageRank ranking
+  importEdges: Map<string, Set<string>>; // resolved imports — drives the detectors (cycles/boundaries) and PageRank
   tags: Map<string, FileTags>;
 }
 
@@ -60,7 +59,7 @@ export interface RankedFile {
   defs: string[]; // a few top symbol names defined here
 }
 
-/** The Fase 1 artifact — emitted as JSON by `patterns scan --json`. */
+/** The Fase 1 artifact — emitted as JSON by `patterns scan`. */
 export interface ScanFindings {
   root: string;
   stack: string[];

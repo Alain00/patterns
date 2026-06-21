@@ -17,7 +17,7 @@ function graph(edges: Array<[string, string]>): FileGraph {
     files.add(to);
     (map.get(from) ?? map.set(from, new Set()).get(from)!).add(to);
   }
-  return { files: [...files], edges: map, tags: new Map() };
+  return { files: [...files], importEdges: map, tags: new Map() };
 }
 
 describe("findLayerViolations", () => {
@@ -46,6 +46,13 @@ describe("findLayerViolations", () => {
       message: "layer violation: controller -> repository (skips a layer)",
       evidence: { fromLayer: "controller", toLayer: "repository", kind: "skip" },
     });
+  });
+
+  it("does not flag controller -> repository when service is absent (2-layer arch)", () => {
+    // Only two layers detected; controller -> repository is the normal adjacent edge,
+    // not a "skip" — the missing service surfaces as an absence, not a violation.
+    const g = graph([["a.controller.ts", "a.repository.ts"]]);
+    expect(findLayerViolations(g, intended(["controller", "repository"]))).toEqual([]);
   });
 
   it("returns [] when there is no detected layering", () => {

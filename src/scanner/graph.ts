@@ -1,10 +1,10 @@
 /**
- * Build the directed file→file graph for Fase 1 (`scan`) — LLM-free.
+ * Build the directed file→file import graph for Fase 1 (`scan`) — LLM-free.
  *
- * Two edge sources, both deterministic:
- *  (1) IMPORT edges — resolve RELATIVE import sources against the importer's dir.
- *  (2) DEF/REF NAME edges (Aider-style) — a file that *refs* a name another file
- *      *defs* gets an edge to that defining file.
+ * Edges come from resolved imports only: a RELATIVE/aliased/workspace import source is
+ * resolved against the node set and forms a `from → to` edge. (Name-ref "Aider-style"
+ * edges were removed — no consumer used them; the detectors and PageRank both rank over
+ * imports, and name-refs only inflated leaf-utility hubs and false cycles.)
  */
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
@@ -49,6 +49,14 @@ function splitStar(s: string): Glob {
 
 /** Best-effort JSONC parse (strips comments + trailing commas); null on failure. */
 function parseJsonc(text: string): any {
+  // Most tsconfig.json files are valid JSON — try that first so a legitimate string
+  // value containing "//" (e.g. a path like "src//gen") can't be corrupted by the
+  // comment-stripping fallback, which would otherwise drop ALL aliases silently.
+  try {
+    return JSON.parse(text);
+  } catch {
+    // not plain JSON — fall through to the JSONC strip-and-parse.
+  }
   try {
     const stripped = text
       .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -225,46 +233,21 @@ export async function buildGraph(projectDir: string, files: string[]): Promise<F
     tags.set(file, await extractTags(code, lang));
   }
 
-  // defname -> files that define it (for the name-ref edges).
-  const defOwners = new Map<string, Set<string>>();
-  for (const file of supported) {
-    for (const def of tags.get(file)!.defs) {
-      let owners = defOwners.get(def.name);
-      if (!owners) defOwners.set(def.name, (owners = new Set()));
-      owners.add(file);
-    }
-  }
-
-  // Two graphs with distinct provenance: importEdges (resolved imports only) drives
-  // the architectural detectors; edges (imports ∪ name-refs) drives PageRank ranking.
-  const edges = new Map<string, Set<string>>();
+  // The directed import graph: resolved imports only.
   const importEdges = new Map<string, Set<string>>();
-  const add = (map: Map<string, Set<string>>, from: string, to: string) => {
+  const add = (from: string, to: string) => {
     if (from === to) return;
-    let set = map.get(from);
-    if (!set) map.set(from, (set = new Set()));
+    let set = importEdges.get(from);
+    if (!set) importEdges.set(from, (set = new Set()));
     set.add(to);
   };
 
   for (const file of supported) {
-    const ft = tags.get(file)!;
-    // (1) import edges → both graphs.
-    for (const source of ft.imports) {
+    for (const source of tags.get(file)!.imports) {
       const resolved = resolveImport(file, source, nodeSet, aliases, packages);
-      if (resolved) {
-        add(importEdges, file, resolved);
-        add(edges, file, resolved);
-      }
-    }
-    // (2) def/ref name edges → ranking graph only (too noisy for cycle/layer analysis).
-    for (const ref of ft.refs) {
-      const owners = defOwners.get(ref.name);
-      if (!owners) continue;
-      for (const owner of owners) {
-        if (owner !== file) add(edges, file, owner);
-      }
+      if (resolved) add(file, resolved);
     }
   }
 
-  return { files: supported, edges, importEdges, tags };
+  return { files: supported, importEdges, tags };
 }

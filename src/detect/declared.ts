@@ -56,7 +56,7 @@ export function findBoundaryViolations(graph: FileGraph, rules: BoundaryRule[]):
   const compiled = rules.map((r) => ({ rule: r, fromRe: globToRegExp(r.from), toRe: globToRegExp(r.to) }));
   const out: Incongruity[] = [];
 
-  for (const [from, tos] of graph.importEdges ?? graph.edges) {
+  for (const [from, tos] of graph.importEdges) {
     for (const { rule, fromRe, toRe } of compiled) {
       if (!fromRe.test(from)) continue;
       for (const to of tos) {

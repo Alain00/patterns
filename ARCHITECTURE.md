@@ -50,6 +50,12 @@ patterns/
 │       ├── help.ts            # USAGE (global) + COMMAND_HELP (per-command — documents flags + defaults)
 │       ├── init.ts  add.ts  list.ts  remove.ts  validate.ts      # v1
 │       └── scan.ts  detect.ts  emit.ts  find.ts  update.ts       # v2 (find/update are stubs)
+├── skills/extract/            # the extract Agent Skill (SKILL.md + grilling.md + FORMAT docs)
+├── docs/
+│   ├── extract.mdx            # the extract flow & CLI reference (docs site)
+│   └── adr/                   # INTERNAL decision records — contributors only, NOT user-facing,
+│                              #   and distinct from a pattern bundle's own adrs/ section
+├── CONTEXT.md  ARCHITECTURE.md  README.md
 └── tests/
 ```
 
@@ -136,7 +142,7 @@ Commands take flags parsed by `cli/args.ts`; `cli/help.ts` is the source of trut
 | `find <query>`                                           | v2 | registry.catalog.search — **not implemented (throws)** |
 | `update [name]`                                          | v2 | registry.resolve → artifact.materialize — **not implemented (throws)** |
 
-The PRODUCE flow (scan → detect → grill → emit) is driven by the `extract` Agent Skill (`skills/extract/`), not a CLI pipeline; the verbs are optional accelerators the agent may invoke and always overrides.
+The extract flow (scan → detect → grill → emit) is driven by the `extract` Agent Skill (`skills/extract/`), not a CLI pipeline; the verbs are optional accelerators the agent may invoke and always overrides.
 
 ## Pattern bundle (the unit on disk)
 

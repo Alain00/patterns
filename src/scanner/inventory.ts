@@ -99,13 +99,21 @@ function posix(rel: string): string {
   return sep === "/" ? rel : rel.split(sep).join("/");
 }
 
+/** The folder tree + flat file list from a single walk (see walkProject). */
+export interface ProjectWalk {
+  tree: FolderNode; // root path "", fileCount = files directly inside (not recursive)
+  files: string[]; // all non-ignored files, projectDir-relative, POSIX, sorted
+}
+
 /**
- * Walk the project tree and build a folder map. Root has path "" and
- * fileCount = files directly inside (not recursive); children sorted by path.
+ * Walk the project tree ONCE, producing both the folder map and the flat file list,
+ * parsing `.gitignore` a single time. `scan` needs both, so this halves its FS walk;
+ * `inventory`/`listFiles` are thin wrappers for callers that need only one.
  */
-export function inventory(projectDir: string, opts: { skip?: Iterable<string> } = {}): FolderNode {
+export function walkProject(projectDir: string, opts: { skip?: Iterable<string> } = {}): ProjectWalk {
   const rules = loadIgnore(projectDir);
   const extra = new Set(opts.skip ?? []);
+  const files: string[] = [];
 
   function walk(absDir: string, relPath: string): FolderNode {
     let entries: import("node:fs").Dirent[];
@@ -125,13 +133,24 @@ export function inventory(projectDir: string, opts: { skip?: Iterable<string> } 
       } else if (entry.isFile()) {
         if (isIgnored(name, rules)) continue;
         fileCount++;
+        files.push(posix(relative(projectDir, join(absDir, name))));
       }
     }
     children.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
     return { path: relPath, fileCount, children };
   }
 
-  return walk(projectDir, "");
+  const tree = walk(projectDir, "");
+  files.sort();
+  return { tree, files };
+}
+
+/**
+ * Walk the project tree and build a folder map. Root has path "" and
+ * fileCount = files directly inside (not recursive); children sorted by path.
+ */
+export function inventory(projectDir: string, opts: { skip?: Iterable<string> } = {}): FolderNode {
+  return walkProject(projectDir, opts).tree;
 }
 
 /**
@@ -139,33 +158,7 @@ export function inventory(projectDir: string, opts: { skip?: Iterable<string> } 
  * separators, sorted.
  */
 export function listFiles(projectDir: string, opts: { skip?: Iterable<string> } = {}): string[] {
-  const rules = loadIgnore(projectDir);
-  const extra = new Set(opts.skip ?? []);
-  const out: string[] = [];
-
-  function walk(absDir: string): void {
-    let entries: import("node:fs").Dirent[];
-    try {
-      entries = readdirSync(absDir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      const name = entry.name;
-      const abs = join(absDir, name);
-      if (entry.isDirectory()) {
-        if (ALWAYS_SKIP.has(name) || extra.has(name) || isIgnored(name, rules)) continue;
-        walk(abs);
-      } else if (entry.isFile()) {
-        if (isIgnored(name, rules)) continue;
-        out.push(posix(relative(projectDir, abs)));
-      }
-    }
-  }
-
-  walk(projectDir);
-  out.sort();
-  return out;
+  return walkProject(projectDir, opts).files;
 }
 
 /** Bump a signal's count and keep up to 3 example paths. */

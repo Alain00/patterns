@@ -21,7 +21,7 @@ Read the repo yourself first. Learn the stack, the module boundaries, the naming
 business logic lives, and what the dominant structure is. On a large repo, accelerate with:
 
 ```
-npx patterns scan .        # structure-map findings JSON: dir tree, stack, conventions, PageRank-ranked files
+patterns scan .        # structure-map findings JSON: dir tree, stack, conventions, PageRank-ranked files
 ```
 
 Treat the map as a fast index into the important files, then read those files. The map is a hint, not
@@ -33,7 +33,7 @@ Optionally surface the structural incongruities the deterministic pass catches r
 cycles** and **layer violations** (plus the intended-pattern convergence/absence summary):
 
 ```
-npx patterns detect .      # reflexion diff JSON: intended pattern + scored incongruities (convergence/divergence/absence)
+patterns detect .      # reflexion diff JSON: intended pattern + scored incongruities (convergence/divergence/absence)
 ```
 
 Each incongruity carries a confidence score. They are **candidates, never verdicts** — validate each
@@ -46,7 +46,7 @@ Boundaries you grill here are captured into the bundle's `boundaries:` block in 
 bundle exists, re-run `detect` to **enforce** them:
 
 ```
-npx patterns detect . --boundaries ./<name>/patterns.yaml
+patterns detect . --boundaries ./<name>/patterns.yaml
 ```
 
 Every import edge that violates a declared `from -> to` rule is a `boundary-violation` (confidence 1).
@@ -79,12 +79,14 @@ Author the **prose** of the bundle yourself from what the grill resolved — nev
 ```
 
 Describe the *shape and the principles*, never the line-by-line inventory (it goes stale and poisons
-context). Then write `patterns.yaml` and validate the rich index with the tool — pipe the manifest you
-resolved (its `structure`/`rules`/`recipes`/`adrs` arrays index the files you just wrote):
+context). Write `README.md` and `AGENTS.md` (plus the section docs) **before** you run `emit` — its
+validation requires them and exits non-zero on a fresh dir. Then write `patterns.yaml` and validate the
+rich index with the tool — pipe the manifest you resolved (its `structure`/`rules`/`recipes`/`adrs`
+arrays index the files you just wrote):
 
 ```
-cat manifest.json | npx patterns emit ./<name>     # scaffolds the dir, writes patterns.yaml, validates the rich index
-npx patterns validate ./<name>                     # confirm every indexed path exists
+cat manifest.json | patterns emit ./<name>     # scaffolds the dir, writes patterns.yaml, validates the rich index
+patterns validate ./<name>                     # confirm every indexed path exists
 ```
 
 `manifest.json` shape: `{ name, version, description, stack: string[],
@@ -99,8 +101,9 @@ boundaries: [{from, to, why}] }`.
   scaffolder. `emit` writes the knowledge bundle only — never the user's `src/`.
 - **The agent writes prose; the CLI writes structure.** You author every `.md`; `emit` only
   serialises `patterns.yaml` and validates. The CLI is LLM-free — it never authors summaries.
-- **Tools are optional accelerators.** `scan`/`detect`/`emit` need no API key and run
-  offline. If a tool is missing or wrong, read the repo directly and continue.
+- **Tools are optional accelerators.** Invoke them as `patterns <verb>` (install the CLI
+  once with `bun link`). `scan`/`detect`/`emit` need no API key and run offline. If the
+  `patterns` binary is missing or a tool's output is wrong, read the repo directly and continue.
 - **Never auto-fix incongruities.** They seed the grill; the user adjudicates which placement is canonical.
 
 </guardrails>

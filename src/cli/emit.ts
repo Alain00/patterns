@@ -16,7 +16,21 @@ export async function emit(dir = process.cwd()): Promise<void> {
   const raw = await Bun.stdin.text();
   if (!raw.trim()) throw new Error("emit expects a manifest JSON on stdin");
 
-  const manifest = manifestSchema.parse(JSON.parse(raw));
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(`emit: stdin is not valid JSON — ${err instanceof Error ? err.message : String(err)}`);
+  }
+  const result = manifestSchema.safeParse(parsed);
+  if (!result.success) {
+    const detail = result.error.issues
+      .map((i) => `  ${i.path.join(".") || "(root)"}: ${i.message}`)
+      .join("\n");
+    throw new Error(`emit: invalid manifest —\n${detail}`);
+  }
+
+  const manifest = result.data;
   const issues = emitBundle(manifest, dir);
 
   for (const i of issues) {

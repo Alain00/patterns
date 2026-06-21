@@ -65,7 +65,7 @@ function stronglyConnected(files: string[], edges: Map<string, Set<string>>): st
 /** One cycle Incongruity per SCC with > 1 member. No cycles -> []. */
 export function findCycles(graph: FileGraph): Incongruity[] {
   const out: Incongruity[] = [];
-  for (const comp of stronglyConnected(graph.files, graph.importEdges ?? graph.edges)) {
+  for (const comp of stronglyConnected(graph.files, graph.importEdges)) {
     const members = [...comp].sort();
     out.push({
       kind: "cycle",

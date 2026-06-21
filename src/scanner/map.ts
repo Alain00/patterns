@@ -4,21 +4,20 @@
  * as an accelerator to understand a repo; it is never authoritative.
  */
 import { buildGraph } from "./graph";
-import { assertProjectDir, detectConventions, inventory, listFiles } from "./inventory";
+import { assertProjectDir, detectConventions, walkProject } from "./inventory";
 import { pageRank } from "./pagerank";
 import { detectStack } from "./stack";
 import type { FileGraph, RankedFile, RankInput, ScanFindings } from "./types";
 
 /**
  * Flatten the import graph into PageRank input. Ranks over `importEdges` (real
- * dependencies), NOT `edges` (imports ∪ name-refs): name-refs make the most-shared
- * leaf utility (one def, many refs — e.g. a `cn` helper) the highest-mass node,
- * which is the opposite of "architecturally central". Falls back to `edges` if a
- * graph lacks the import split.
+ * dependencies): import edges put the architecturally central modules at the top,
+ * whereas name-ref edges (since removed) made the most-shared leaf utility — one def,
+ * many refs, e.g. a `cn` helper — the highest-mass node, the opposite of central.
  */
 function toRankInput(graph: FileGraph): RankInput {
   const edges: RankInput["edges"] = [];
-  for (const [from, tos] of graph.importEdges ?? graph.edges) {
+  for (const [from, tos] of graph.importEdges) {
     for (const to of tos) edges.push({ from, to });
   }
   return { nodes: graph.files, edges };
@@ -52,8 +51,7 @@ export async function scanProject(
   assertProjectDir(projectDir);
   const limit = opts.limit ?? DEFAULT_RANKED_LIMIT;
   const conventionsLimit = opts.conventionsLimit ?? CONVENTIONS_LIMIT;
-  const files = listFiles(projectDir, { skip: opts.skip });
-  const dirTree = inventory(projectDir, { skip: opts.skip });
+  const { tree: dirTree, files } = walkProject(projectDir, { skip: opts.skip });
   const stack = detectStack(projectDir);
   const conventions = detectConventions(files);
 

@@ -5,14 +5,14 @@ A CLI and registry for distributable **architecture patterns** — bundles that 
 ## Language
 
 **Pattern**:
-The unit a user installs — an `patterns.yaml`-rooted bundle of structure, rules, recipes, and ADRs that encodes one way to organize a project. The CLI is `patterns`; the registry is patterns.directory.
+The unit a user installs — a `patterns.yaml`-rooted bundle of structure, rules, recipes, and ADRs that encodes one way to organize a project. The CLI is `patterns`; the registry is patterns.directory.
 _Avoid_: Architecture (the broader concept a pattern encodes, not the unit), Artifact, Template, Boilerplate
 
 **patterns.yaml**:
 The only structured file in a pattern — its *manifest* (`PatternManifest` in code). Lightweight metadata plus an index of what each folder contains and the applicable stack. What the registry reads to index a pattern, and what an agent reads first (progressive disclosure) to know what exists, where, and how to use it.
 
 **Extract**:
-The Agent Skill that drives the PRODUCE flow — the AI agent reads the repo directly and *that* understanding is authoritative; the CLI verbs (`scan`/`detect`/`emit`) are optional accelerator tools it may invoke, not a mandatory pipeline or the source of truth.
+The Agent Skill that drives the extract flow — the AI agent reads the repo directly and *that* understanding is authoritative; the CLI verbs (`scan`/`detect`/`emit`) are optional accelerator tools it may invoke, not a mandatory pipeline or the source of truth.
 _Avoid_: treating it as a CLI command or pipeline, or treating the CLI verbs' output as authoritative over the agent's own reading
 
 **scan**:

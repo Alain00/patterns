@@ -43,19 +43,23 @@ const pct = (share: number) => `${Math.round(share * 100)}%`;
 /** Edges that respect the layering (same layer or within `maxSkip` layers inward). */
 function countRespectedLayerEdges(
   graph: FileGraph,
-  layers: Set<string>,
+  layers: string[],
   model: LayerModel,
   maxSkip: number,
 ): number {
+  // Rank by position within the detected layering (see findLayerViolations).
+  const detectedRank = new Map(layers.map((l, i) => [l, i] as const));
   let n = 0;
-  for (const [from, tos] of graph.importEdges ?? graph.edges) {
+  for (const [from, tos] of graph.importEdges) {
     const fl = model.fileLayer(from);
-    if (fl === null || !layers.has(fl)) continue;
-    const rf = model.layerRank(fl);
+    if (fl === null) continue;
+    const rf = detectedRank.get(fl);
+    if (rf === undefined) continue;
     for (const to of tos) {
       const tl = model.fileLayer(to);
-      if (tl === null || !layers.has(tl)) continue;
-      const rt = model.layerRank(tl);
+      if (tl === null) continue;
+      const rt = detectedRank.get(tl);
+      if (rt === undefined) continue;
       if (rt >= rf && rt <= rf + maxSkip) n++;
     }
   }
@@ -76,7 +80,7 @@ function convergences(
     out.push(`${d.count} files follow ${d.signal} (${pct(d.share)} of ${family(d.signal)})`);
   }
   if (intended.layering) {
-    const respected = countRespectedLayerEdges(graph, new Set(intended.layering.layers), model, maxSkip);
+    const respected = countRespectedLayerEdges(graph, intended.layering.layers, model, maxSkip);
     out.push(`layering ${intended.layering.layers.join(" → ")} respected by ${respected} edge(s)`);
   }
   return out;

@@ -30,6 +30,21 @@ describe("graph tsconfig aliases", () => {
     expect(imports.has("src/c.ts")).toBe(true); // via baseUrl-relative bare import
   });
 
+  it("keeps aliases when a tsconfig string value contains '//' (parseJsonc regression)", async () => {
+    // A "//"-containing value must not trip the JSONC comment stripper: valid JSON is
+    // parsed as-is, so the alias still resolves (the old stripper dropped ALL aliases).
+    const dir = project({
+      "tsconfig.json": JSON.stringify({
+        compilerOptions: { baseUrl: ".", paths: { "@/*": ["src/*"], note: ["see//here"] } },
+      }),
+      "src/a.ts": `import { b } from "@/b";\nexport const a = 1;`,
+      "src/b.ts": "export const b = 2;",
+    });
+    const g = await buildGraph(dir, listFiles(dir));
+    const imports = g.importEdges.get("src/a.ts") ?? new Set<string>();
+    expect(imports.has("src/b.ts")).toBe(true);
+  });
+
   it("resolves monorepo workspace package imports (@repo/ui + subpath)", async () => {
     const dir = project({
       "package.json": JSON.stringify({ name: "root", private: true, workspaces: ["apps/*", "packages/*"] }),

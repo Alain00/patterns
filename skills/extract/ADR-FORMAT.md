@@ -17,8 +17,9 @@ decisions get revisited.
 
 ## Numbering
 
-`adrs/0001-slug.md`, `0002-slug.md`, … Scan the `adrs/` directory for the highest number and increment.
-Create it lazily — only when the first ADR is needed.
+`adrs/0001-slug.md`, `0002-slug.md`, … Scan the bundle's own `<name>/adrs/` directory (never any
+`adrs/` at the repo root) for the highest number and increment. Create it lazily — only when the
+first ADR is needed.
 
 ## Offer an ADR only when all three are true
 

@@ -8,7 +8,7 @@ function graph(files: string[], edges: Array<[string, string]>): FileGraph {
     if (!map.has(from)) map.set(from, new Set());
     (map.get(from) as Set<string>).add(to);
   }
-  return { files, edges: map, tags: new Map() };
+  return { files, importEdges: map, tags: new Map() };
 }
 
 describe("findCycles", () => {

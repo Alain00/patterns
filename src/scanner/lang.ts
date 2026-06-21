@@ -3,7 +3,7 @@
  *
  * Wraps `web-tree-sitter` (pinned to 0.22.6 — newer cores have an ABI mismatch with
  * the prebuilt `tree-sitter-wasms` grammars) and resolves the core + grammar `.wasm`
- * via `require.resolve` so it works under `npx patterns` from any cwd, not just here.
+ * via `require.resolve` so it works under a globally-linked `patterns` from any cwd, not just here.
  *
  * MVP languages: TS / TSX / JS (the user's NestJS stack). Adding a grammar = one entry
  * in GRAMMARS + EXT_LANG + a tags query.

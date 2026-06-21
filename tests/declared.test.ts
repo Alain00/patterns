@@ -9,7 +9,7 @@ import type { FileGraph } from "../src/scanner/types";
 function graph(importEdges: Record<string, string[]>): FileGraph {
   const m = new Map<string, Set<string>>();
   for (const [f, tos] of Object.entries(importEdges)) m.set(f, new Set(tos));
-  return { files: Object.keys(importEdges), edges: m, importEdges: m, tags: new Map() };
+  return { files: Object.keys(importEdges), importEdges: m, tags: new Map() };
 }
 
 describe("findBoundaryViolations", () => {

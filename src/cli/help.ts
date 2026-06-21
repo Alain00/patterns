@@ -20,8 +20,8 @@ v2
   scan [path]        emit a structure-map (findings JSON) of a codebase
   detect [path]      emit architectural incongruities (reflexion diff JSON)
   emit [dir]         write a bundle from a manifest JSON on stdin
-  find <query>       search the patterns.directory catalog
-  update [name]      refresh installed pattern(s)
+  find <query>       search the patterns.directory catalog            (not yet implemented)
+  update [name]      refresh installed pattern(s)                      (not yet implemented)
 
 Run \`patterns <command> --help\` for a command's options and defaults.
 `;
@@ -94,11 +94,17 @@ Reads the manifest the agent resolved (pipe it in), scaffolds <dir>, writes
 patterns.yaml, and validates the rich index. The agent authors the prose; emit only
 serializes structure. No LLM, no network.
 
+Note: emit's validation requires README.md and AGENTS.md in <dir> — emit does NOT write
+them, you do. Author the prose first, or a fresh-dir emit exits non-zero on those files.
+
 Usage:
   cat manifest.json | patterns emit ./my-pattern
 
 Arguments:
   dir                       bundle directory to write (default: current directory)
+
+Options:
+  -h, --help                show this help
 `;
 
 const VALIDATE_HELP = `patterns validate [path] — check a bundle's manifest and rich index

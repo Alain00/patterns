@@ -9,7 +9,8 @@
   },
   "files": [
     "bin",
-    "src"
+    "src",
+    "skills"
   ],
   "scripts": {
     "dev": "bun bin/patterns.ts",

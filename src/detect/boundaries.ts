@@ -27,19 +27,24 @@ export function findLayerViolations(
   if (intended.layering === null) return [];
   const model = opts.model ?? DEFAULT_LAYER_MODEL;
   const maxSkip = opts.maxLayerSkip ?? 1;
-  const layers = new Set(intended.layering.layers);
+  // Rank by POSITION within the DETECTED layering, not the canonical model rank — so
+  // controller→repository in a 2-layer repo (no service) is distance 1 (OK), not a
+  // phantom "skips a layer". A real skip needs ≥3 detected layers with one jumped over.
+  const detectedRank = new Map(intended.layering.layers.map((l, i) => [l, i] as const));
   const out: Incongruity[] = [];
 
-  // Layer violations are about real dependencies — use imports only, not name-refs.
-  for (const [from, tos] of graph.importEdges ?? graph.edges) {
+  // Layer violations are about real dependencies — imports only, never name-refs.
+  for (const [from, tos] of graph.importEdges) {
     const fromLayer = model.fileLayer(from);
-    if (fromLayer === null || !layers.has(fromLayer)) continue;
-    const rf = model.layerRank(fromLayer);
+    if (fromLayer === null) continue;
+    const rf = detectedRank.get(fromLayer);
+    if (rf === undefined) continue;
 
     for (const to of tos) {
       const toLayer = model.fileLayer(to);
-      if (toLayer === null || !layers.has(toLayer)) continue;
-      const rt = model.layerRank(toLayer);
+      if (toLayer === null) continue;
+      const rt = detectedRank.get(toLayer);
+      if (rt === undefined) continue;
 
       if (rt < rf) {
         // inner -> outer: a dependency pointing the wrong way.
