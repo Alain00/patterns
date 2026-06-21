@@ -8,6 +8,7 @@ import { detect } from "./detect";
 import { emit } from "./emit";
 import { find } from "./find";
 import { update } from "./update";
+import { publishCmd } from "./publish";
 import { COMMAND_HELP, USAGE } from "./help";
 
 export async function run(argv: string[]): Promise<void> {
@@ -49,6 +50,8 @@ export async function run(argv: string[]): Promise<void> {
       return find(args[0]!);
     case "update":
       return update(args[0]);
+    case "publish":
+      return publishCmd(args[0]);
     default:
       process.stderr.write(`unknown command: ${command}\n\n${USAGE}`);
       process.exitCode = 1;

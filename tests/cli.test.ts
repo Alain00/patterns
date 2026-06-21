@@ -9,10 +9,11 @@ import { parse as parseYaml } from "yaml";
 const BIN = fileURLToPath(new URL("../bin/patterns.ts", import.meta.url));
 
 /** Run the CLI as a real subprocess so these are true end-to-end tests of the binary. */
-function run(args: string[], opts: { stdin?: string; cwd?: string } = {}) {
+function run(args: string[], opts: { stdin?: string; cwd?: string; env?: Record<string, string> } = {}) {
   const res = spawnSync(process.execPath, [BIN, ...args], {
     input: opts.stdin ?? "",
     cwd: opts.cwd,
+    env: opts.env ? { ...process.env, ...opts.env } : process.env,
     encoding: "utf8",
   });
   return { stdout: res.stdout ?? "", stderr: res.stderr ?? "", code: res.status ?? 0 };
@@ -116,19 +117,26 @@ describe("patterns scan / detect", () => {
   });
 });
 
-describe("v2 stubs and dispatch", () => {
-  it("find fails clean as not implemented", () => {
-    const r = run(["find", "foo"]);
+describe("v2 commands and dispatch", () => {
+  it("find queries the catalog and fails cleanly when it's unreachable", () => {
+    // Point at an unreachable host so the catalog client errors deterministically (no network).
+    const r = run(["find", "foo"], { env: { PATTERNS_API_URL: "http://127.0.0.1:9" } });
     expect(r.code).toBe(1);
-    expect(r.stderr).toContain("not implemented");
+    expect(r.stderr).toMatch(/could not reach catalog|no catalog available/);
   });
 
-  it("update fails fast as not implemented and does NOT write a router AGENTS.md", () => {
+  it("update with nothing installed is a no-op and does NOT write a router AGENTS.md", () => {
     const dir = tmp("cli-update-");
     const r = run(["update"], { cwd: dir });
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain("no patterns installed");
+    expect(existsSync(join(dir, "AGENTS.md"))).toBe(false); // never clobbers when there's nothing to do
+  });
+
+  it("publish outside a git repo fails cleanly", () => {
+    const r = run(["publish"], { cwd: tmp("cli-pub-") });
     expect(r.code).toBe(1);
-    expect(r.stderr).toContain("not implemented");
-    expect(existsSync(join(dir, "AGENTS.md"))).toBe(false); // fail-fast: no side effect
+    expect(r.stderr.length).toBeGreaterThan(0);
   });
 
   it("an unknown command exits 1 with usage", () => {

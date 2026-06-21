@@ -1,7 +1,8 @@
 import { GitSource } from "../registry/git-source";
 import { validatePattern } from "../core/validate";
-import { materialize } from "../artifact/materialize";
+import { materialize, writeOrigin } from "../artifact/materialize";
 import { writeRouter } from "../artifact/router";
+import { pingInstall } from "../registry/telemetry";
 
 /** Fetch a pattern from a git ref and materialize it into the current project (descriptive only). */
 export async function add(ref: string, cwd = process.cwd()): Promise<void> {
@@ -16,6 +17,10 @@ export async function add(ref: string, cwd = process.cwd()): Promise<void> {
   }
 
   const dest = materialize(pattern, cwd);
+  writeOrigin(pattern.manifest.name, ref, cwd);
   writeRouter(cwd);
   console.log(`installed pattern "${pattern.manifest.name}" → ${dest}`);
+
+  // Best-effort popularity signal (ADR-0001); never blocks or breaks install.
+  await pingInstall(ref);
 }

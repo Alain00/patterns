@@ -20,8 +20,10 @@ v2
   scan [path]        emit a structure-map (findings JSON) of a codebase
   detect [path]      emit architectural incongruities (reflexion diff JSON)
   emit [dir]         write a bundle from a manifest JSON on stdin
-  find <query>       search the patterns.directory catalog            (not yet implemented)
-  update [name]      refresh installed pattern(s)                      (not yet implemented)
+  find <query>       search the patterns.directory catalog
+  update [name]      refresh installed pattern(s)
+  publish [ref]      register a pattern in the patterns.directory index
+                     (ref inferred from the current git repo when omitted)
 
 Run \`patterns <command> --help\` for a command's options and defaults.
 `;
@@ -119,12 +121,15 @@ Arguments:
 const ADD_HELP = `patterns add <ref> — fetch a pattern from a git ref and install it
 
 Installs descriptively under .patterns/<name>/ and updates the root AGENTS.md router;
-never writes your source.
+never writes your source. Records the ref in a .origin sidecar so \`update\` can refresh it.
 
 Arguments:
   ref                       a git locator, e.g. owner/repo, owner/repo#tag,
                             owner/repo/subdir, host.tld/owner/repo, or a local ./path
                             (default host: github.com)
+
+Sends a best-effort, opt-out install ping after a successful install
+(PATTERNS_TELEMETRY=0 to disable); it never blocks or breaks the install.
 `;
 
 const LIST_HELP = `patterns list — list patterns installed in this project (under .patterns/)
@@ -136,16 +141,35 @@ Arguments:
   name                      installed pattern name
 `;
 
-const FIND_HELP = `patterns find <query> — search the patterns.directory catalog  (v2 — not yet implemented)
+const FIND_HELP = `patterns find <query> — search the patterns.directory catalog
+
+Queries the hosted patterns.directory search API and prints each match's ref, ready to
+pass to \`patterns add\`. Results are install-ranked. Set PATTERNS_API_URL to point at a
+private/internal catalog.
 
 Arguments:
   query                     search terms
 `;
 
-const UPDATE_HELP = `patterns update [name] — refresh installed pattern(s)  (v2 — not yet implemented)
+const UPDATE_HELP = `patterns update [name] — refresh installed pattern(s)
+
+Re-resolves each installed pattern from the ref it was added from (recorded in its
+.origin sidecar), re-validates, and re-materializes it. With no name, updates every
+installed pattern; patterns with no recorded origin are skipped with a warning.
 
 Arguments:
   name                      pattern to refresh (default: all installed)
+`;
+
+const PUBLISH_HELP = `patterns publish [ref] — register a pattern in the patterns.directory index
+
+POSTs only the ref to the hosted index; the server fetches and validates the pattern's
+patterns.yaml from the ref itself (no content is uploaded). The ref is optional — when
+omitted it is inferred from the current git repo (origin remote + the patterns.yaml
+location). Distribution stays git-native; the index is a discovery cache.
+
+Arguments:
+  ref                       a git locator (default: inferred from the current repo)
 `;
 
 /** Per-command descriptive usage, keyed by command name. */
@@ -160,4 +184,5 @@ export const COMMAND_HELP: Record<string, string> = {
   remove: REMOVE_HELP,
   find: FIND_HELP,
   update: UPDATE_HELP,
+  publish: PUBLISH_HELP,
 };

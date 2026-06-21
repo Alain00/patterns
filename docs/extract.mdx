@@ -140,7 +140,7 @@ to the agent.
 
 - `USAGE` — the global synopsis (command list + "run `patterns <command> --help`").
 - `COMMAND_HELP` — a per-command page documenting **every flag with its default**, the arguments, and
-  notes. `find` / `update` are marked `(v2 — not yet implemented)`.
+  notes. The discovery verbs `find` / `update` / `publish` are documented there too.
 
 ### `cli/index.ts` — the dispatcher
 
@@ -205,7 +205,7 @@ persistent project config).
   `parse.ts` (`parseManifest` / `serializeManifest`), `bundle.ts` (layout constants), `validate.ts`
   (`validatePattern` checks required files + a path-confined, existing rich index).
 - **`registry/`** — git-native transport:
-  `GitSource.resolve` / `parseRef`, `listInstalled`; `catalog.search` is a v2 stub.
+  `GitSource.resolve` / `parseRef`, `listInstalled`; discovery (`find`/`publish`) is a thin client to the hosted patterns.directory API.
 - **`artifact/`** — materializes a pattern into a target repo, descriptively: `materialize`
   (`.patterns/<name>/`), `writeRouter` (root `AGENTS.md`), `unmaterialize`.
 

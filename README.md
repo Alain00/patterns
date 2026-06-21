@@ -40,8 +40,9 @@ validate [path]    check patterns.yaml + that the rich index matches real files
 scan [path]        emit a structure-map (findings JSON) of a codebase            (v2)
 detect [path]      emit architectural incongruities (reflexion diff JSON)        (v2)
 emit [dir]         write a bundle from a manifest JSON on stdin                  (v2)
-find <query>       search the patterns.directory catalog            (v2 — not yet implemented)
-update [name]      refresh installed pattern(s)                      (v2 — not yet implemented)
+find <query>       search the patterns.directory catalog                          (v2)
+update [name]      refresh installed pattern(s)                                   (v2)
+publish [ref]      register a pattern in the patterns.directory index            (v2)
 ```
 
 Run `patterns <command> --help` for a command's options and defaults.

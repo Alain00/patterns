@@ -1,6 +1,6 @@
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { INSTALL_DIR } from "../core/bundle";
+import { INSTALL_DIR, ORIGIN_FILE } from "../core/bundle";
 import { parseManifest } from "../core/parse";
 import type { PatternManifest } from "../core/schema";
 
@@ -9,6 +9,8 @@ export interface InstalledPattern {
   version: string;
   manifest: PatternManifest;
   path: string;
+  /** The ref this pattern was installed from; undefined for installs predating origin tracking. */
+  origin?: string;
 }
 
 /** List the patterns installed under <project>/.patterns. */
@@ -22,10 +24,17 @@ export function listInstalled(projectDir: string): InstalledPattern[] {
     const dir = join(base, entry.name);
     try {
       const { manifest } = parseManifest(dir);
-      out.push({ name: manifest.name, version: manifest.version, manifest, path: dir });
+      out.push({ name: manifest.name, version: manifest.version, manifest, path: dir, origin: readOrigin(dir) });
     } catch {
       // skip directories without a valid patterns.yaml
     }
   }
   return out;
+}
+
+function readOrigin(dir: string): string | undefined {
+  const file = join(dir, ORIGIN_FILE);
+  if (!existsSync(file)) return undefined;
+  const value = readFileSync(file, "utf8").trim();
+  return value || undefined;
 }

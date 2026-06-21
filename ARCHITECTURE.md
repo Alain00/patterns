@@ -20,7 +20,7 @@ patterns/
 │   ├── scanner/               # Fase 1 (scan) — deterministic structure map
 │   │   ├── inventory.ts       # tree walk → FolderNode + listFiles + detectConventions + isTestFile
 │   │   ├── lang.ts            # tree-sitter engine (web-tree-sitter 0.22.6) → def/ref/import tags
-│   │   ├── graph.ts           # buildGraph → FileGraph (import edges + name-ref edges; alias/workspace resolution)
+│   │   ├── graph.ts           # buildGraph → FileGraph (resolved import edges; alias/workspace resolution)
 │   │   ├── pagerank.ts        # power-iteration PageRank over the graph
 │   │   ├── stack.ts           # detectStack — dep/config markers → stack tags
 │   │   ├── map.ts             # scanProject — assembles the ScanFindings JSON
@@ -35,10 +35,14 @@ patterns/
 │   │   └── types.ts           # DetectFindings / Incongruity / IntendedPattern
 │   ├── emit/                  # Fase 4 (emit)
 │   │   └── bundle.ts          # emitBundle — scaffold dir + serialize patterns.yaml + validate
-│   ├── registry/              # transport: git-native, no backend
+│   ├── registry/              # transport: git-native distribution + hosted discovery
 │   │   ├── source.ts          # PatternSource interface (resolve(ref) → Pattern)
 │   │   ├── git-source.ts      # GitSource + parseRef (owner/repo[/subdir][#ref], hosts, local paths)
-│   │   ├── catalog.ts         # search the static patterns.directory index   (v2 — throws, not implemented)
+│   │   ├── catalog.ts         # search the hosted patterns.directory index (find)   (v2)
+│   │   ├── publish.ts         # POST a ref to the index to register a pattern        (v2)
+│   │   ├── detect-ref.ts      # infer owner/repo[/sub] from the current repo         (v2)
+│   │   ├── telemetry.ts       # opt-out install ping after `add`                     (v2)
+│   │   ├── ref.ts             # client mirror of the server's ref parser
 │   │   └── installed.ts       # listInstalled → InstalledPattern[] (read .patterns/ in the current repo)
 │   ├── artifact/              # pattern → project files (descriptive only)
 │   │   ├── materialize.ts     # write .patterns/<name>/ into target project
@@ -49,7 +53,7 @@ patterns/
 │       ├── args.ts            # parseArgs + strFlag/numFlag/listFlag/boolFlag/firstPositional
 │       ├── help.ts            # USAGE (global) + COMMAND_HELP (per-command — documents flags + defaults)
 │       ├── init.ts  add.ts  list.ts  remove.ts  validate.ts      # v1
-│       └── scan.ts  detect.ts  emit.ts  find.ts  update.ts       # v2 (find/update are stubs)
+│       └── scan.ts  detect.ts  emit.ts  find.ts  update.ts  publish.ts   # v2
 ├── skills/extract/            # the extract Agent Skill (SKILL.md + grilling.md + FORMAT docs)
 ├── docs/
 │   ├── extract.mdx            # the extract flow & CLI reference (docs site)
@@ -111,11 +115,14 @@ emitBundle(manifest: PatternManifest, dir: string): Issue[]   // scaffold + writ
 
 ### registry
 ```ts
-interface PatternSource { resolve(ref: string): Promise<Pattern> }
+interface PatternSource { resolve(ref: string): Promise<Pattern> }   // ADR-0001
 class GitSource implements PatternSource { /* parseRef → fetch → bundle */ }
 parseRef(ref: string): ParsedRef                                     // owner/repo[/subdir][#ref] | host.tld/... | ./local
-listInstalled(dir: string): InstalledPattern[]                      // { name, version, manifest, path }
-search(query: string): CatalogEntry[]                               // v2 — throws "not implemented"
+listInstalled(dir: string): InstalledPattern[]                      // { name, version, manifest, path, origin? }
+search(query: string): Promise<CatalogEntry[]>                      // v2 — hosted catalog (patterns.directory)
+publish(ref: string): Promise<PublishResult>                        // v2 — register in the hosted index
+detectRef(cwd?: string): Promise<string>                            // v2 — infer ref from the current git repo
+pingInstall(ref: string): Promise<void>                             // v2 — opt-out install telemetry (best-effort)
 ```
 
 ### artifact
@@ -132,15 +139,19 @@ Commands take flags parsed by `cli/args.ts`; `cli/help.ts` is the source of trut
 | Command | Phase | Calls |
 |---|---|---|
 | `init <name>` `[--version --description]`                | v1 | core: scaffold empty bundle tree |
-| `add <ref>`                                              | v1 | registry.GitSource.resolve → core.validatePattern (gate on error-level issues) → artifact.materialize + writeRouter |
+| `add <ref>`                                              | v1 | registry.GitSource.resolve → core.validatePattern (gate on error-level issues) → artifact.materialize + writeRouter (+ best-effort registry.pingInstall) |
 | `list`                                                   | v1 | registry.listInstalled |
 | `remove <name>`                                          | v1 | artifact.unmaterialize |
 | `validate [path]`                                        | v1 | core.validatePattern |
 | `scan [path]` `[--limit --conventions-limit --skip]`     | v2 | scanner.scanProject → ScanFindings JSON (stdout) |
 | `detect [path]` `[--layers --boundaries --skip …]`       | v2 | detect.detectProject → reflexion-diff JSON (stdout) |
 | `emit [dir]`                                             | v2 | emit.emitBundle (manifest JSON from stdin) → patterns.yaml + validate |
-| `find <query>`                                           | v2 | registry.catalog.search — **not implemented (throws)** |
-| `update [name]`                                          | v2 | registry.resolve → artifact.materialize — **not implemented (throws)** |
+| `find <query>`                                           | v2 | registry.search (hosted patterns.directory catalog) |
+| `update [name]`                                          | v2 | registry.resolve (via the `.origin` sidecar) → artifact.materialize (re-write) |
+| `publish [ref]`                                          | v2 | registry.detectRef (when ref omitted) → registry.publish (POST /api/patterns) |
+
+`add` also fires `registry.pingInstall` after a successful install — a best-effort,
+opt-out (`PATTERNS_TELEMETRY=0`) popularity ping that never blocks or breaks install.
 
 The extract flow (scan → detect → grill → emit) is driven by the `extract` Agent Skill (`skills/extract/`), not a CLI pipeline; the verbs are optional accelerators the agent may invoke and always overrides.
 
