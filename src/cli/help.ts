@@ -14,6 +14,8 @@ v1
   add <ref>          fetch a pattern from a git ref and install it (descriptive only)
   list               list patterns installed in this project
   remove <name>      uninstall a pattern
+  sync [dir]         install the consume skill + wire the agent files (AGENTS.md,
+                     CLAUDE.md, Cursor, Copilot) to follow installed patterns
   validate [path]    check patterns.yaml + that the rich index matches real files
 
 v2
@@ -124,8 +126,11 @@ Arguments:
 
 const ADD_HELP = `patterns add <ref> — fetch a pattern from a git ref and install it
 
-Installs descriptively under .patterns/<name>/ and updates the root AGENTS.md router;
-never writes your source. Records the ref in a .origin sidecar so \`update\` can refresh it.
+Installs descriptively under .patterns/<name>/; never writes your source. Records the ref
+in a .origin sidecar so \`update\` can refresh it. Then wires the agent integration (same as
+\`patterns sync\`): installs the consume skill under .claude/skills/ and (re)writes a managed
+block in AGENTS.md, CLAUDE.md, the Cursor rule, and the Copilot instructions, so any agent
+follows the installed patterns. Hand-edited content outside the markers is preserved.
 
 Arguments:
   ref                       a git locator, e.g. owner/repo, owner/repo#tag,
@@ -136,10 +141,31 @@ Sends a best-effort, opt-out install ping after a successful install
 (PATTERNS_TELEMETRY=0 to disable); it never blocks or breaks the install.
 `;
 
+const SYNC_HELP = `patterns sync [dir] — install the consume skill + wire the agent files
+
+(Re)installs the consume skill at .claude/skills/consume/ and (re)writes the managed
+"# Project patterns" block — which patterns are installed and how to follow them — into
+every supported agent-instruction file: AGENTS.md, CLAUDE.md, .cursor/rules/patterns.mdc,
+and .github/copilot-instructions.md. This is the same step \`add\`/\`update\`/\`remove\` run; use
+it to wire (or re-wire) a repo without installing a new pattern. skill.sh is a thin wrapper.
+
+Idempotent and create-if-missing: only the content between the markers is rewritten, so
+anything you put outside them is preserved. Descriptive only — never touches your source.
+
+Arguments:
+  dir                       repo to wire (default: current directory)
+
+Options:
+  -h, --help                show this help
+`;
+
 const LIST_HELP = `patterns list — list patterns installed in this project (under .patterns/)
 `;
 
-const REMOVE_HELP = `patterns remove <name> — uninstall a pattern and clean its router entry
+const REMOVE_HELP = `patterns remove <name> — uninstall a pattern and re-wire the agent files
+
+Deletes .patterns/<name>/ and refreshes the managed block in every agent-instruction file
+so the removed pattern drops out. The consume skill stays installed.
 
 Arguments:
   name                      installed pattern name
@@ -159,7 +185,8 @@ const UPDATE_HELP = `patterns update [name] — refresh installed pattern(s)
 
 Re-resolves each installed pattern from the ref it was added from (recorded in its
 .origin sidecar), re-validates, and re-materializes it. With no name, updates every
-installed pattern; patterns with no recorded origin are skipped with a warning.
+installed pattern; patterns with no recorded origin are skipped with a warning. After a
+refresh it re-wires the agent integration (consume skill + the managed blocks).
 
 Arguments:
   name                      pattern to refresh (default: all installed)
@@ -194,6 +221,7 @@ export const COMMAND_HELP: Record<string, string> = {
   add: ADD_HELP,
   list: LIST_HELP,
   remove: REMOVE_HELP,
+  sync: SYNC_HELP,
   find: FIND_HELP,
   update: UPDATE_HELP,
   publish: PUBLISH_HELP,

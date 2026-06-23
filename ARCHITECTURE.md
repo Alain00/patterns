@@ -15,7 +15,8 @@ patterns/
 │   ├── core/                  # the patterns.yaml contract — depended on by every layer
 │   │   ├── schema.ts          # PatternManifest (+ scope) + boundarySchema (zod); Pattern interface
 │   │   ├── parse.ts           # parseManifest / serializeManifest (MANIFEST_FILE = patterns.yaml)
-│   │   ├── bundle.ts          # bundle layout: BUNDLE_DIRS, BUNDLE_FILES, INSTALL_DIR, ROUTER_FILE
+│   │   ├── bundle.ts          # bundle layout + install constants: BUNDLE_DIRS/FILES, INSTALL_DIR,
+│   │   │                       #   ROUTER_FILE, AGENT_FILES, MARKER_*, CONSUME_SKILL, SKILL_INSTALL_DIR
 │   │   └── validate.ts        # validatePattern → Issue[] (required files + path-safe rich index)
 │   ├── scanner/               # Fase 1 (scan) — deterministic structure map
 │   │   ├── inventory.ts       # tree walk → FolderNode + listFiles + detectConventions + isTestFile
@@ -46,17 +47,22 @@ patterns/
 │   │   └── installed.ts       # listInstalled → InstalledPattern[] (read .patterns/ in the current repo)
 │   ├── artifact/              # pattern → project files (descriptive only)
 │   │   ├── materialize.ts     # write .patterns/<name>/ into target project
-│   │   ├── router.ts          # create/update the root AGENTS.md router
-│   │   └── remove.ts          # unmaterialize: delete bundle + clean router entry
+│   │   ├── skill.ts           # installConsumeSkill: copy skills/consume → .claude/skills/<consume>/
+│   │   ├── router.ts          # write the managed block into every agent file + syncAgents (skill + blocks)
+│   │   └── remove.ts          # unmaterialize: delete bundle (caller re-syncs agent files)
 │   └── cli/                   # one file per command + shared parsing/help, wired by index.ts
 │       ├── index.ts           # run(argv): global + per-command --help, then dispatch
 │       ├── args.ts            # parseArgs + strFlag/numFlag/listFlag/boolFlag/firstPositional
 │       ├── help.ts            # USAGE (global) + COMMAND_HELP (per-command — documents flags + defaults)
-│       ├── init.ts  add.ts  list.ts  remove.ts  validate.ts      # v1
+│       ├── init.ts  add.ts  list.ts  remove.ts  sync.ts  validate.ts      # v1
 │       └── scan.ts  detect.ts  emit.ts  find.ts  update.ts  publish.ts   # v2
-├── skills/extract/            # the extract Agent Skill (SKILL.md + grilling.md + GENERALIZATION.md + FORMAT docs)
+├── skills/
+│   ├── extract/               # the extract (produce) Agent Skill (SKILL.md + grilling.md + GENERALIZATION.md + FORMAT docs)
+│   └── consume/               # the consume Agent Skill (SKILL.md + BUNDLE.md) — copied into a repo on install
+├── skill.sh                   # wrapper over `patterns sync` — wire a repo's agent files in every format
 ├── docs/
 │   ├── extract.mdx            # the extract flow & CLI reference (docs site)
+│   ├── consume.mdx            # the consume flow: follow installed patterns (docs site)
 │   └── adr/                   # INTERNAL decision records — contributors only, NOT user-facing,
 │                              #   and distinct from a pattern bundle's own adrs/ section
 ├── CONTEXT.md  ARCHITECTURE.md  README.md
@@ -130,8 +136,10 @@ pingInstall(ref: string): Promise<void>                             // v2 — op
 
 ### artifact
 ```ts
-materialize(p: Pattern, dir: string): string   // write .patterns/<name>/ ONLY (returns its path)
-writeRouter(dir: string): void                 // root AGENTS.md → installed patterns
+materialize(p: Pattern, dir: string): string              // write .patterns/<name>/ ONLY (returns its path)
+installConsumeSkill(dir: string): string | null           // copy skills/consume → .claude/skills/ (null if source absent)
+writeRouter(dir: string): string[]                        // write the managed block into every AGENT_FILES (returns them)
+syncAgents(dir: string): { skill: string | null; files: string[] }  // installConsumeSkill + writeRouter (ADR-0010)
 unmaterialize(name: string, dir: string): void
 ```
 
@@ -142,15 +150,16 @@ Commands take flags parsed by `cli/args.ts`; `cli/help.ts` is the source of trut
 | Command | Phase | Calls |
 |---|---|---|
 | `init <name>` `[--version --description]`                | v1 | core: scaffold empty bundle tree |
-| `add <ref>`                                              | v1 | registry.GitSource.resolve → core.validatePattern (gate on error-level issues) → artifact.materialize + writeRouter (+ best-effort registry.pingInstall) |
+| `add <ref>`                                              | v1 | registry.GitSource.resolve → core.validatePattern (gate on error-level issues) → artifact.materialize + syncAgents (skill + agent files) (+ best-effort registry.pingInstall) |
 | `list`                                                   | v1 | registry.listInstalled |
-| `remove <name>`                                          | v1 | artifact.unmaterialize |
+| `remove <name>`                                          | v1 | artifact.unmaterialize → artifact.syncAgents (drop the entry, keep the skill) |
+| `sync [dir]`                                             | v1 | artifact.syncAgents — (re)install the consume skill + (re)write the agent files (no pattern install) |
 | `validate [path]`                                        | v1 | core.validatePattern |
 | `scan [path]` `[--limit --conventions-limit --skip]`     | v2 | scanner.scanProject → ScanFindings JSON (stdout) |
 | `detect [path]` `[--layers --boundaries --skip …]`       | v2 | detect.detectProject → reflexion-diff JSON (stdout) |
 | `emit [dir]`                                             | v2 | emit.emitBundle (manifest JSON from stdin) → patterns.yaml + validate |
 | `find <query>`                                           | v2 | registry.search (hosted patterns.directory catalog) |
-| `update [name]`                                          | v2 | registry.resolve (via the `.origin` sidecar) → artifact.materialize (re-write) |
+| `update [name]`                                          | v2 | registry.resolve (via the `.origin` sidecar) → artifact.materialize (re-write) → artifact.syncAgents |
 | `publish [ref]` `[--force]`                              | v2 | core.parseManifest scope guard (refuse `internal`, `--force` overrides) → registry.detectRef (when ref omitted) → registry.publish (POST /api/patterns) |
 
 `add` also fires `registry.pingInstall` after a successful install — a best-effort,
@@ -171,4 +180,13 @@ The extract flow (scan → detect → grill → emit) is driven by the `extract`
 └── adrs/              # justify
 ```
 
-Installed into a target repo as `.patterns/<name>/` with a root `AGENTS.md` router pointing at it. Source folders are never touched.
+Installed into a target repo as `.patterns/<name>/`. Install also runs the **agent integration**
+(ADR-0010): the generic **consume** skill (`skills/consume/`) is copied to `.claude/skills/consume/`,
+and a managed `# Project patterns` block — the consume skill + when to follow it + the installed
+patterns — is (re)written into every agent file: `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/patterns.mdc`,
+`.github/copilot-instructions.md`. Each block is marker-delimited and create-if-missing, so hand-edited
+content is preserved and re-runs never duplicate. Source folders are never touched.
+
+The two skills are the inbound/outbound pair: **extract** (`skills/extract/`) turns a repo into a
+pattern; **consume** (`skills/consume/`) makes an agent follow an installed one. extract is user-invoked;
+consume is auto-invocable.

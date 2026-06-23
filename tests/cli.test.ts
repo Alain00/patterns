@@ -140,6 +140,37 @@ describe("patterns scan / detect", () => {
   });
 });
 
+describe("patterns sync", () => {
+  it("installs the consume skill and wires every agent file", () => {
+    const dir = tmp("cli-sync-");
+    const r = run(["sync"], { cwd: dir });
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain("consume skill");
+    expect(existsSync(join(dir, ".claude/skills/consume/SKILL.md"))).toBe(true);
+    for (const rel of ["AGENTS.md", "CLAUDE.md", ".cursor/rules/patterns.mdc", ".github/copilot-instructions.md"]) {
+      const body = readFileSync(join(dir, rel), "utf8");
+      expect(body).toContain("# Project patterns");
+      expect(body).toContain(".claude/skills/consume/SKILL.md");
+    }
+  });
+
+  it("is idempotent — a second sync leaves a single managed block", () => {
+    const dir = tmp("cli-sync-idem-");
+    run(["sync"], { cwd: dir });
+    run(["sync"], { cwd: dir });
+    const body = readFileSync(join(dir, "AGENTS.md"), "utf8");
+    expect(body.split("<!-- patterns:start -->").length - 1).toBe(1);
+  });
+
+  it("accepts an explicit target dir argument", () => {
+    const base = tmp("cli-sync-arg-");
+    const target = join(base, "nested");
+    const r = run(["sync", target]);
+    expect(r.code).toBe(0);
+    expect(existsSync(join(target, "AGENTS.md"))).toBe(true);
+  });
+});
+
 describe("v2 commands and dispatch", () => {
   it("find queries the catalog and fails cleanly when it's unreachable", () => {
     // Point at an unreachable host so the catalog client errors deterministically (no network).

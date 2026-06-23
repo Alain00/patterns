@@ -9,6 +9,7 @@ import { emit } from "./emit";
 import { find } from "./find";
 import { update } from "./update";
 import { publishCmd } from "./publish";
+import { sync } from "./sync";
 import { COMMAND_HELP, USAGE } from "./help";
 
 export async function run(argv: string[]): Promise<void> {
@@ -37,6 +38,8 @@ export async function run(argv: string[]): Promise<void> {
     case "remove":
       requireArg(command, args[0], "name");
       return remove(args[0]!);
+    case "sync":
+      return sync(args[0]);
     case "validate":
       return validate(args[0]);
     case "scan":

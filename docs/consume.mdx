@@ -1,0 +1,84 @@
+---
+title: The consume flow — follow installed patterns
+description: How an agent follows a pattern once it's installed — the consume skill, the agent-file wiring written on install, the progressive-disclosure read order, and the `sync` command.
+---
+
+# The consume flow
+
+`patterns add` puts a **pattern bundle** in your repo, but a bundle sitting in `.patterns/` only helps
+if your coding agent actually reads and follows it. The consume flow closes that loop: every install
+wires a generic, auto-invocable **`consume` Agent Skill** into the repo so any agent places new code
+where the architecture says it belongs.
+
+> **The thesis.** The vibe coder doesn't go looking for architecture — the agent has to apply the
+> pattern *for* them, almost invisibly. So consuming is an Agent Skill, not a command you run: it fires
+> when the agent writes code, reads the bundle's index, and follows the map.
+
+## At a glance
+
+```text
+patterns add <ref>
+  ├─ materialize        copy the bundle to .patterns/<name>/      (descriptive — never touches src/)
+  └─ agent integration  install the consume skill + wire the agent files (this page)
+
+AGENT (writing code in the repo)
+  ├─ discover           the # Project patterns block / .patterns/*/patterns.yaml
+  ├─ orient             read patterns.yaml — the rich index + boundaries
+  ├─ read on demand     open only the structure/ rules/ recipes/ doc the task needs
+  └─ follow             place code where the pattern says; respect the boundaries
+```
+
+---
+
+## What install wires
+
+`add`, `update`, `remove`, and the standalone `sync` all run one **agent-integration** step:
+
+1. **The consume skill** is copied to `.claude/skills/consume/` so any harness that auto-discovers
+   project skills picks it up.
+2. A managed **`# Project patterns`** block is (re)written into every supported agent-instruction file:
+
+   | File | Tool |
+   |---|---|
+   | `AGENTS.md` | the tool-agnostic entry point (Codex and others) |
+   | `CLAUDE.md` | Claude Code |
+   | `.cursor/rules/patterns.mdc` | Cursor |
+   | `.github/copilot-instructions.md` | GitHub Copilot |
+
+The block doesn't contain the architecture — it *routes*: it points at the consume skill, says **when**
+to follow a pattern (before placing code), and lists each installed pattern with a pointer to its
+`patterns.yaml`. Every write is **marker-delimited** (`<!-- patterns:start -->` … `<!-- patterns:end -->`),
+**create-if-missing**, and **idempotent** — only the block between the markers is rewritten, so anything
+you hand-edit outside the markers is preserved and re-runs never leave duplicates.
+
+## The follow-protocol the skill teaches
+
+The `consume` skill is **domain-agnostic** (one skill for every pattern) and **auto-invocable** — the
+deliberate inverse of `extract`, which is user-invoked. It teaches the agent to:
+
+1. **Discover** — find installed patterns from the `# Project patterns` block, or by globbing
+   `.patterns/*/patterns.yaml` directly (the robust signal).
+2. **Orient** — open the relevant `patterns.yaml` *first*: `description`, `scope`, `stack`, the
+   rich-index one-liners (`structure[].is`, `rules[].enforces`, `recipes[].when`, `adrs[].decides`),
+   and the `boundaries`.
+3. **Read on demand** — open only the one or two docs the task needs (**progressive disclosure**), not
+   the whole bundle.
+4. **Follow** — place code where the pattern puts that kind of thing, name it the pattern's way, and
+   never introduce an import a `boundaries` rule forbids. A `shareable` pattern uses role placeholders
+   (`<Entity>`); map them to the repo's real names.
+
+A pattern is a **map, not a generator**: the skill uses it to place the code you're already writing, it
+never scaffolds folders or generates code on its own, and it never hand-edits `.patterns/` (refresh that
+with `patterns update`).
+
+## `sync` and `skill.sh`
+
+To wire — or re-wire after a manual edit — a repo's agent integration **without** installing a new
+pattern:
+
+```sh
+patterns sync [dir]      # (re)install the consume skill + (re)write the agent files
+./skill.sh [dir]         # thin wrapper over `patterns sync`
+```
+
+Both are idempotent and descriptive only.

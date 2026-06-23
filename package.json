@@ -10,7 +10,8 @@
   "files": [
     "bin",
     "src",
-    "skills"
+    "skills",
+    "skill.sh"
   ],
   "scripts": {
     "dev": "bun bin/patterns.ts",
