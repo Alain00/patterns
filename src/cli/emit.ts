@@ -48,5 +48,13 @@ export async function emit(dir = process.cwd()): Promise<void> {
     `${manifest.structure.length} structure / ${manifest.rules.length} rules / ` +
     `${manifest.recipes.length} recipes / ${manifest.adrs.length} adrs` +
     (manifest.boundaries.length ? ` / ${manifest.boundaries.length} boundaries` : "");
-  console.log(`✓ ${manifest.name}@${manifest.version} — ${counts} → ${dir}`);
+  console.log(`✓ ${manifest.name}@${manifest.version} (${manifest.scope}) — ${counts} → ${dir}`);
+
+  // Remind the author that a house pattern is not publishable as-is, so they don't
+  // discover the publish guard only after pushing. (shareable bundles say nothing.)
+  if (manifest.scope === "internal") {
+    console.log(
+      "  ↳ internal scope: a house pattern (may carry business nomenclature). Generalize it (scope: shareable) before publishing.",
+    );
+  }
 }

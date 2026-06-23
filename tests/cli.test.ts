@@ -77,6 +77,29 @@ describe("patterns emit", () => {
     expect(r2.code).toBe(0);
     expect(r2.stdout).toContain("p@0.1.0");
   });
+
+  it("tags the bundle scope and warns that an internal pattern is not publishable", () => {
+    const out = join(tmp("cli-emit-scope-"), "p");
+    run(["emit", out], { stdin: valid }); // scaffold patterns.yaml (internal by default)
+    writeFileSync(join(out, "README.md"), "# p\n");
+    writeFileSync(join(out, "AGENTS.md"), "# p\n");
+    const r = run(["emit", out], { stdin: valid });
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain("(internal)");
+    expect(r.stdout).toMatch(/internal scope/);
+  });
+
+  it("emits a shareable-scope bundle without the internal warning", () => {
+    const out = join(tmp("cli-emit-share-"), "p");
+    const shareable = JSON.stringify({ name: "p", version: "0.1.0", description: "a demo", scope: "shareable" });
+    run(["emit", out], { stdin: shareable });
+    writeFileSync(join(out, "README.md"), "# p\n");
+    writeFileSync(join(out, "AGENTS.md"), "# p\n");
+    const r = run(["emit", out], { stdin: shareable });
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain("(shareable)");
+    expect(r.stdout).not.toMatch(/internal scope/);
+  });
 });
 
 describe("patterns validate", () => {
@@ -137,6 +160,34 @@ describe("v2 commands and dispatch", () => {
     const r = run(["publish"], { cwd: tmp("cli-pub-") });
     expect(r.code).toBe(1);
     expect(r.stderr.length).toBeGreaterThan(0);
+  });
+
+  it("refuses to publish an internal-scope pattern, and --force bypasses the guard", () => {
+    function bundleDir(scope: string): string {
+      const dir = tmp("cli-pub-scope-");
+      writeFileSync(
+        join(dir, "patterns.yaml"),
+        `name: housey\nversion: 0.1.0\ndescription: demo\nscope: ${scope}\nstack: []\n`,
+      );
+      writeFileSync(join(dir, "README.md"), "# housey\n");
+      writeFileSync(join(dir, "AGENTS.md"), "# housey\n");
+      return dir;
+    }
+
+    // internal → blocked by the local guard, before any git/network work.
+    const blocked = run(["publish"], { cwd: bundleDir("internal") });
+    expect(blocked.code).toBe(1);
+    expect(blocked.stderr).toContain("internal-scope");
+
+    // --force skips the scope guard; it then fails later (no git origin), NOT on scope.
+    const forced = run(["publish", "--force"], { cwd: bundleDir("internal") });
+    expect(forced.code).toBe(1);
+    expect(forced.stderr).not.toContain("internal-scope");
+
+    // positive control: a shareable bundle passes the guard (then fails on git, not scope).
+    const shared = run(["publish"], { cwd: bundleDir("shareable") });
+    expect(shared.code).toBe(1);
+    expect(shared.stderr).not.toContain("internal-scope");
   });
 
   it("an unknown command exits 1 with usage", () => {

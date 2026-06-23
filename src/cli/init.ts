@@ -32,6 +32,8 @@ export function init(args: string[] = [], cwd = process.cwd()): void {
       name,
       version: strFlag(p, "version") ?? "0.1.0",
       description: strFlag(p, "description") ?? DEFAULT_DESCRIPTION,
+      // A freshly scaffolded bundle is a house pattern until it is generalized.
+      scope: "internal",
       stack: [],
       structure: [],
       rules: [],

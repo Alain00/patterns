@@ -45,6 +45,14 @@ what matters; park large refactors instead of diluting the session.
   Don't batch. Offer an ADR only when it's hard-to-reverse **and** surprising **and** a real trade-off
   (see ADR-FORMAT.md).
 
+## Scope-aware grilling
+
+If the scope is `shareable` (SKILL.md §0), add one reflex to every maneuver: when the user or the
+code supplies a business term, **generalize it on the spot** — "your repo calls this `Patient`; in a
+shareable pattern that's `<Entity>` — agreed?" Resolve placement in role terms so the bundle never has
+to be de-business-ified afterward. See [GENERALIZATION.md](./GENERALIZATION.md). For an `internal`
+pattern, concrete names are welcome — skip this reflex.
+
 ## Convergence
 
 There is no hard question cap — too many questions is a quality problem (redundant prompts), not a count.

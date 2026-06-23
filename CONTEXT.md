@@ -11,6 +11,14 @@ _Avoid_: Architecture (the broader concept a pattern encodes, not the unit), Art
 **patterns.yaml**:
 The only structured file in a pattern — its *manifest* (`PatternManifest` in code). Lightweight metadata plus an index of what each folder contains and the applicable stack. What the registry reads to index a pattern, and what an agent reads first (progressive disclosure) to know what exists, where, and how to use it.
 
+**Scope**:
+Who a pattern is for, recorded as `scope` in `patterns.yaml`. **`internal`** — a *house pattern* that may carry business nomenclature (entity, product, team names), kept to enforce consistency inside one codebase. **`shareable`** — a *domain-agnostic* bundle (roles and shapes only), safe to publish. Defaults to `internal`; `publish` refuses an `internal`-scope pattern (override with `--force`). See [[ADR-0009]].
+_Avoid_: using "scope" for a pattern's subject area or folder coverage (here it means the audience — house vs. shareable); "public/private" (the axis is domain-agnostic vs. house, not visibility); "register" (that is publishing to the index).
+
+**Generalization**:
+Turning an `internal` (domain-rich) pattern into a `shareable` (agnostic) one: scrub business/internal names, rename concrete entities to roles (`Order` → `<Entity>`), and turn recipes into templates — while keeping the architecture (layers, stack, conventions, boundaries). The shareable bundle is the internal one minus the business. Contract: `skills/extract/GENERALIZATION.md`.
+_Avoid_: treating it as anonymizing the user's source (it rewrites the pattern's prose, never `src/`), or as a lossy summary (it preserves the architecture, drops only the domain).
+
 **Extract**:
 The Agent Skill that drives the extract flow — the AI agent reads the repo directly and *that* understanding is authoritative; the CLI verbs (`scan`/`detect`/`emit`) are optional accelerator tools it may invoke, not a mandatory pipeline or the source of truth.
 _Avoid_: treating it as a CLI command or pipeline, or treating the CLI verbs' output as authoritative over the agent's own reading

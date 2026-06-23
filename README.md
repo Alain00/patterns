@@ -51,6 +51,8 @@ Run `patterns <command> --help` for a command's options and defaults.
 
 `scan → detect → grill → emit` turns an existing repo into a publishable pattern. It is driven by the **`extract` Agent Skill** ([skills/extract/](skills/extract/SKILL.md)) — the agent reads the repo directly and *that* understanding is authoritative; the CLI verbs are optional deterministic accelerators it may invoke. `detect` enforces the boundaries you grilled, declared in `patterns.yaml`.
 
+Each pattern declares a **scope**: `internal` (a house pattern — domain-rich, to keep one codebase consistent) or `shareable` (domain-agnostic — roles and shapes only, safe to distribute). The skill asks which up front; `publish` accepts only a `shareable` pattern (`--force` to override).
+
 ## Docs
 
 - [CONTEXT.md](CONTEXT.md) — the glossary (canonical vocabulary)

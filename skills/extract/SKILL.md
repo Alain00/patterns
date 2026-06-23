@@ -12,8 +12,31 @@ read the repo directly — business logic, stack, dependencies, the file tree, w
 and *that* understanding is authoritative. The CLI verbs below are optional accelerator tools; they
 never replace your own reading, and you always override them.
 
-Work the four phases in order. Do not auto-generate-and-publish: the value of a pattern is the
-curation, and an auto-generated bundle performs *worse* than no bundle at all. Curate every piece.
+**First settle the scope (§0)**, then work the four phases in order. Do not auto-generate-and-publish:
+the value of a pattern is the curation, and an auto-generated bundle performs *worse* than no bundle at
+all. Curate every piece.
+
+## 0. Choose the scope (internal vs shareable)
+
+Before anything else, ask the user **one question**: is this pattern for **internal** use or to **share**?
+This sets `scope` in the manifest and changes how you write every doc.
+
+- **`internal`** — a *house pattern*. It improves consistency inside this one codebase, so it **may**
+  name concrete domain concepts: entities (`Order`, `Patient`), services (`OrdersService`),
+  product/company names, feature folders. Richer is more useful here.
+- **`shareable`** — the architecture as an **agnostic layer**, publishable to patterns.directory. It
+  carries **no business nomenclature and no internal names** — only roles and shapes (`<Entity>`,
+  `*.service.ts`, "the domain layer holds pure rules, no IO"). Someone in a completely different domain
+  must be able to adopt it verbatim.
+
+Recommend `shareable` when the user wants to publish/distribute, `internal` when they want to hold the
+pattern to keep their own codebase consistent. If `shareable`, follow the generalization contract in
+[GENERALIZATION.md](./GENERALIZATION.md) throughout phases 3–4 — scrub business names, rename concrete
+entities to roles, turn recipes into templates. You are not locked in: an `internal` bundle can be
+generalized into a `shareable` one later by re-running this skill over it with that same contract.
+
+The default is `internal`, so a pattern is never shareable by omission — you mark it `shareable`
+deliberately, and `publish` refuses an `internal`-scope pattern.
 
 ## 1. Understand (read the repo)
 
@@ -79,19 +102,20 @@ Author the **prose** of the bundle yourself from what the grill resolved — nev
 ```
 
 Describe the *shape and the principles*, never the line-by-line inventory (it goes stale and poisons
-context). Write `README.md` and `AGENTS.md` (plus the section docs) **before** you run `emit` — its
-validation requires them and exits non-zero on a fresh dir. Then write `patterns.yaml` and validate the
-rich index with the tool — pipe the manifest you resolved (its `structure`/`rules`/`recipes`/`adrs`
-arrays index the files you just wrote):
+context). If the scope is `shareable`, every doc here obeys [GENERALIZATION.md](./GENERALIZATION.md)
+(no business names; roles and shapes only). Write `README.md` and `AGENTS.md` (plus the section docs)
+**before** you run `emit` — its validation requires them and exits non-zero on a fresh dir. Then write
+`patterns.yaml` and validate the rich index with the tool — pipe the manifest you resolved (carrying the
+`scope` from §0; its `structure`/`rules`/`recipes`/`adrs` arrays index the files you just wrote):
 
 ```
 cat manifest.json | patterns emit ./<name>     # scaffolds the dir, writes patterns.yaml, validates the rich index
 patterns validate ./<name>                     # confirm every indexed path exists
 ```
 
-`manifest.json` shape: `{ name, version, description, stack: string[],
-structure: [{path, is}], rules: [{path, enforces}], recipes: [{path, when}], adrs: [{path, decides}],
-boundaries: [{from, to, why}] }`.
+`manifest.json` shape: `{ name, version, description, scope: "internal" | "shareable",
+stack: string[], structure: [{path, is}], rules: [{path, enforces}], recipes: [{path, when}],
+adrs: [{path, decides}], boundaries: [{from, to, why}] }`. Omit `scope` and it defaults to `internal`.
 
 </what-to-do>
 
@@ -105,5 +129,8 @@ boundaries: [{from, to, why}] }`.
   once with `bun link`). `scan`/`detect`/`emit` need no API key and run offline. If the
   `patterns` binary is missing or a tool's output is wrong, read the repo directly and continue.
 - **Never auto-fix incongruities.** They seed the grill; the user adjudicates which placement is canonical.
+- **Internal vs shareable is a hard line.** A `shareable` pattern contains zero business nomenclature or
+  internal names (see §0 + [GENERALIZATION.md](./GENERALIZATION.md)). `publish` enforces it — it refuses
+  an `internal`-scope bundle. Never publish a house pattern by relabeling it; generalize it first.
 
 </guardrails>

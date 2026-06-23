@@ -13,7 +13,7 @@ patterns/
 │   └── patterns.ts            # CLI entry (#!/usr/bin/env bun) → run(argv) in src/cli
 ├── src/
 │   ├── core/                  # the patterns.yaml contract — depended on by every layer
-│   │   ├── schema.ts          # PatternManifest + boundarySchema (zod); Pattern interface
+│   │   ├── schema.ts          # PatternManifest (+ scope) + boundarySchema (zod); Pattern interface
 │   │   ├── parse.ts           # parseManifest / serializeManifest (MANIFEST_FILE = patterns.yaml)
 │   │   ├── bundle.ts          # bundle layout: BUNDLE_DIRS, BUNDLE_FILES, INSTALL_DIR, ROUTER_FILE
 │   │   └── validate.ts        # validatePattern → Issue[] (required files + path-safe rich index)
@@ -54,7 +54,7 @@ patterns/
 │       ├── help.ts            # USAGE (global) + COMMAND_HELP (per-command — documents flags + defaults)
 │       ├── init.ts  add.ts  list.ts  remove.ts  validate.ts      # v1
 │       └── scan.ts  detect.ts  emit.ts  find.ts  update.ts  publish.ts   # v2
-├── skills/extract/            # the extract Agent Skill (SKILL.md + grilling.md + FORMAT docs)
+├── skills/extract/            # the extract Agent Skill (SKILL.md + grilling.md + GENERALIZATION.md + FORMAT docs)
 ├── docs/
 │   ├── extract.mdx            # the extract flow & CLI reference (docs site)
 │   └── adr/                   # INTERNAL decision records — contributors only, NOT user-facing,
@@ -71,7 +71,9 @@ Real exported signatures; bodies are out of scope for this map.
 ```ts
 type BoundaryRule = { from: string; to: string; why: string };          // glob from→to forbid
 type PatternManifest = {
-  name: string; version: string; description: string; stack: string[];
+  name: string; version: string; description: string;
+  scope: "internal" | "shareable";                   // who it's for; publish guards on it (ADR-0009)
+  stack: string[];
   structure: { path: string; is: string }[];       // rich index
   rules:     { path: string; enforces: string }[];
   recipes:   { path: string; when: string }[];
@@ -122,6 +124,7 @@ listInstalled(dir: string): InstalledPattern[]                      // { name, v
 search(query: string): Promise<CatalogEntry[]>                      // v2 — hosted catalog (patterns.directory)
 publish(ref: string): Promise<PublishResult>                        // v2 — register in the hosted index
 detectRef(cwd?: string): Promise<string>                            // v2 — infer ref from the current git repo
+findManifestDir(cwd: string, stop?: string): string | null          // v2 — locate the local patterns.yaml (publish scope guard reuses it)
 pingInstall(ref: string): Promise<void>                             // v2 — opt-out install telemetry (best-effort)
 ```
 
@@ -148,7 +151,7 @@ Commands take flags parsed by `cli/args.ts`; `cli/help.ts` is the source of trut
 | `emit [dir]`                                             | v2 | emit.emitBundle (manifest JSON from stdin) → patterns.yaml + validate |
 | `find <query>`                                           | v2 | registry.search (hosted patterns.directory catalog) |
 | `update [name]`                                          | v2 | registry.resolve (via the `.origin` sidecar) → artifact.materialize (re-write) |
-| `publish [ref]`                                          | v2 | registry.detectRef (when ref omitted) → registry.publish (POST /api/patterns) |
+| `publish [ref]` `[--force]`                              | v2 | core.parseManifest scope guard (refuse `internal`, `--force` overrides) → registry.detectRef (when ref omitted) → registry.publish (POST /api/patterns) |
 
 `add` also fires `registry.pingInstall` after a successful install — a best-effort,
 opt-out (`PATTERNS_TELEMETRY=0`) popularity ping that never blocks or breaks install.
@@ -159,7 +162,7 @@ The extract flow (scan → detect → grill → emit) is driven by the `extract`
 
 ```
 <name>/
-├── patterns.yaml      # only structured file; identity + rich index + boundaries
+├── patterns.yaml      # only structured file; identity + scope + rich index + boundaries
 ├── README.md          # for humans: what it is, trade-offs, how to use
 ├── AGENTS.md          # for agents: how to use/extend this pattern
 ├── structure/         # describe — domain.md, schema.md, …

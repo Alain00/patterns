@@ -43,7 +43,7 @@ disagrees with what the agent reads, the agent's reading wins.
 | --- | --- | --- |
 | `inventory.ts` | `inventory` (walk to `FolderNode`), `listFiles`, `detectConventions`, `isTestFile`, `assertProjectDir` | Walks the tree once, derives majority-rule conventions (`dir:` / `ext:` / `suffix:`), and decides what is noise. `ALWAYS_SKIP` (build dirs) + a `.gitignore` matcher keep `.next`/`dist` from contaminating the map. |
 | `lang.ts` | `extractTags` (tree-sitter to defs/refs/imports), `langForFile`, `supportedExtensions` | Deterministic parsing engine. `web-tree-sitter` is **pinned to 0.22.6** (ABI). MVP languages: TS / TSX / JS. Caches one parser per language to avoid a WASM leak. |
-| `graph.ts` | `buildGraph` to `FileGraph`, `resolveImport` | The directed graph. `importEdges` = imports only (drives detectors and ranking); `edges` = imports plus name-refs. `resolveImport` walks relative to `tsconfig` aliases to monorepo workspace packages to baseUrl. `RESOLVE_SUFFIXES` is derived from `supportedExtensions()` so it never drifts from the parser. |
+| `graph.ts` | `buildGraph` to `FileGraph`, `resolveImport` | The directed graph. `importEdges` = resolved imports only — it drives the detectors and ranking. `resolveImport` walks relative to `tsconfig` aliases to monorepo workspace packages to baseUrl. `RESOLVE_SUFFIXES` is derived from `supportedExtensions()` so it never drifts from the parser. |
 | `pagerank.ts` | `pageRank` (power iteration) | Ranks the real architectural hubs over `importEdges` (not leaf utilities). |
 | `stack.ts` | `detectStack` | Stack tags from `package.json` deps and config markers — a hint, not authority. |
 | `map.ts` | `scanProject` to `ScanFindings` | **The assembler.** dir tree + stack + conventions + ranked files (trimmed to N) + total. Options: `limit` / `conventionsLimit` / `skip`. |
@@ -93,13 +93,17 @@ patterns detect . --boundaries ./my-pattern/patterns.yaml    # enforce a declare
 adjudicating the canonical pattern with the user **one question at a time**, seeded by the surviving
 incongruities.
 
-- `SKILL.md` — the orchestrator (the four phases; `disable-model-invocation: true`, user-invoked).
+- `SKILL.md` — the orchestrator (the scope choice + the four phases; `disable-model-invocation: true`, user-invoked).
 - `grilling.md` — the grill rules (one question at a time, codebase-first, the five maneuvers).
+- `GENERALIZATION.md` — the shareable contract (scrub business names, rename entities to roles) applied
+  when the scope is `shareable`.
 - `CONTEXT-FORMAT.md` / `ADR-FORMAT.md` — the formats for the glossary and ADRs it materializes onto
   the user's repo.
 
-As decisions crystallize the agent materializes `CONTEXT.md` + ADRs, and **captures the declared
-boundaries** that `detect` then enforces.
+Before the phases the skill settles the **scope**: `internal` (a house pattern, domain-rich) or
+`shareable` (domain-agnostic, publishable), recorded as `scope` in `patterns.yaml`. As decisions
+crystallize the agent materializes `CONTEXT.md` + ADRs, and **captures the declared boundaries** that
+`detect` then enforces.
 
 ---
 
@@ -111,7 +115,9 @@ never auto-generates an uncurated bundle (an auto-generated bundle performs wors
 - `emit/bundle.ts` — `emitBundle`: scaffolds the dir, `serializeManifest` (`patterns.yaml`), then
   `validatePattern` to `Issue[]`.
 - `cli/emit.ts` — reads the manifest JSON from **stdin** (an `isTTY` guard prevents a silent hang),
-  calls `emitBundle`, and prints an inventory line (`name@version — N structure / N rules / ... / N boundaries -> dir`).
+  calls `emitBundle`, and prints an inventory line (`name@version (scope) — N structure / N rules / ... / N boundaries -> dir`).
+  The manifest carries `scope: internal | shareable` (default `internal`); emit tags the bundle with it
+  and reminds the author that a `shareable` bundle is the one `publish` will accept.
 
 ```sh
 cat manifest.json | patterns emit ./my-pattern    # scaffold + write patterns.yaml + validate
@@ -188,9 +194,9 @@ persistent project config).
 
 1. **Layers by phase + a shared core.** `scanner` = Fase 1, `detect` = Fase 2, `emit` = Fase 4. Each
    phase is independently testable, and a later split into a monorepo is mechanical.
-2. **Edge provenance** (`importEdges` vs `edges`). Detectors and ranking use imports only — a clean
-   signal. Name-ref edges are dropped from structural analysis because they inflate false hubs and
-   false cycles.
+2. **Imports-only edges** (`importEdges`). Detectors and ranking use resolved imports — a clean signal.
+   Name-reference edges were removed entirely: they inflated false hubs and false cycles, and no
+   consumer used them.
 3. **`detect` emits only intent-independent facts.** A detector that is wrong two-thirds of the time
    trains the user to ignore it and poisons the grill it feeds. Intent is **declared** (boundaries in
    the grill), not inferred.
@@ -201,11 +207,11 @@ persistent project config).
 
 ## Supporting layers (context, not part of `extract`)
 
-- **`core/`** — the `patterns.yaml` contract: `schema.ts` (`PatternManifest` + `boundarySchema`),
+- **`core/`** — the `patterns.yaml` contract: `schema.ts` (`PatternManifest` incl. `scope` + `boundarySchema`),
   `parse.ts` (`parseManifest` / `serializeManifest`), `bundle.ts` (layout constants), `validate.ts`
   (`validatePattern` checks required files + a path-confined, existing rich index).
 - **`registry/`** — git-native transport:
-  `GitSource.resolve` / `parseRef`, `listInstalled`; discovery (`find`/`publish`) is a thin client to the hosted patterns.directory API.
+  `GitSource.resolve` / `parseRef`, `listInstalled`; discovery (`find`/`publish`) is a thin client to the hosted patterns.directory API. `publish` refuses an `internal`-scope pattern (a local scope guard) before POSTing the ref.
 - **`artifact/`** — materializes a pattern into a target repo, descriptively: `materialize`
   (`.patterns/<name>/`), `writeRouter` (root `AGENTS.md`), `unmaterialize`.
 

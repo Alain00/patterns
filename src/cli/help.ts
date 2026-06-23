@@ -99,6 +99,10 @@ serializes structure. No LLM, no network.
 Note: emit's validation requires README.md and AGENTS.md in <dir> — emit does NOT write
 them, you do. Author the prose first, or a fresh-dir emit exits non-zero on those files.
 
+Scope: the manifest may set scope: internal | shareable (default internal). An internal
+pattern is a house style that may carry business nomenclature; only a shareable (domain-
+agnostic) bundle is publishable (see \`patterns publish --help\`).
+
 Usage:
   cat manifest.json | patterns emit ./my-pattern
 
@@ -168,8 +172,16 @@ patterns.yaml from the ref itself (no content is uploaded). The ref is optional 
 omitted it is inferred from the current git repo (origin remote + the patterns.yaml
 location). Distribution stays git-native; the index is a discovery cache.
 
+Scope guard: a pattern's patterns.yaml carries scope: internal | shareable. publish
+refuses an internal-scope pattern — a house style that may contain business nomenclature.
+Generalize it to a shareable (domain-agnostic) bundle first, or override with --force.
+
 Arguments:
   ref                       a git locator (default: inferred from the current repo)
+
+Options:
+  --force                   publish even an internal-scope pattern
+  -h, --help                show this help
 `;
 
 /** Per-command descriptive usage, keyed by command name. */

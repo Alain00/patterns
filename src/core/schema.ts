@@ -21,6 +21,14 @@ export const manifestSchema = z.object({
   name: z.string().min(1),
   version: z.string().min(1),
   description: z.string().min(1),
+
+  // Who the pattern is for (ADR-0009). `internal` = a house pattern that may carry
+  // business nomenclature (entity names, product names) — kept to enforce consistency
+  // inside one codebase. `shareable` = a domain-agnostic bundle, safe to publish.
+  // Defaults to `internal` so an un-generalized pattern can never be published by
+  // omission — `publish` guards on this field.
+  scope: z.enum(["internal", "shareable"]).default("internal"),
+
   stack: z.array(z.string()).default([]),
 
   // rich index — `path` + a single summary field per section
@@ -34,6 +42,9 @@ export const manifestSchema = z.object({
 });
 
 export type PatternManifest = z.infer<typeof manifestSchema>;
+
+/** Who a pattern is for: a house pattern vs. a publishable, domain-agnostic one. */
+export type PatternScope = PatternManifest["scope"];
 
 /** A pattern bundle resolved on disk: parsed patterns.yaml + the directory it lives in. */
 export interface Pattern {

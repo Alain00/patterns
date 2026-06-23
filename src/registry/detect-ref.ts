@@ -68,12 +68,16 @@ export function parseOriginUrl(url: string): string | null {
   return `${match[1]}/${match[2]}`;
 }
 
-/** Walk up from cwd to the repo root looking for the directory that holds patterns.yaml. */
-function findManifestDir(cwd: string, root: string): string | null {
+/**
+ * Walk up from `cwd` looking for the directory that holds patterns.yaml. Stops at
+ * `stop` (e.g. the git root) when given, otherwise at the filesystem root. Exported
+ * so `publish`'s scope guard can read the local bundle on the inferred-ref path.
+ */
+export function findManifestDir(cwd: string, stop?: string): string | null {
   let dir = cwd;
   while (true) {
     if (existsSync(join(dir, MANIFEST_FILE))) return dir;
-    if (dir === root) return null;
+    if (dir === stop) return null;
     const parent = dirname(dir);
     if (parent === dir) return null;
     dir = parent;

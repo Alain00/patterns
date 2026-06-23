@@ -51,7 +51,7 @@ export async function run(argv: string[]): Promise<void> {
     case "update":
       return update(args[0]);
     case "publish":
-      return publishCmd(args[0]);
+      return publishCmd(args);
     default:
       process.stderr.write(`unknown command: ${command}\n\n${USAGE}`);
       process.exitCode = 1;

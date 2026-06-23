@@ -10,6 +10,7 @@ const MANIFEST: PatternManifest = {
   name: "hex",
   version: "0.1.0",
   description: "ports and adapters",
+  scope: "internal",
   stack: ["node"],
   structure: [{ path: "structure/domain.md", is: "pure rules" }],
   rules: [],
