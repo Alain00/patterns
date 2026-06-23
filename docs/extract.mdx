@@ -1,0 +1,222 @@
+---
+title: The extract flow & CLI reference
+description: How patterns turns a repo into a publishable pattern — the four-phase extract flow, the deterministic CLI verbs and their flags, and the design rationale behind each.
+---
+
+# The `extract` flow & CLI reference
+
+`patterns` turns an existing repo into a publishable **pattern bundle** — a description of its
+folder structure and the architecture that lives in it, that other people (and their agents) can
+replicate. This page documents the `extract` flow end to end: the four phases, the modules and
+functions behind each, the CLI verbs and their flags, and the reasoning behind every piece.
+
+> **The thesis.** The AI agent is the protagonist: it reads the repo directly and *that* understanding
+> is authoritative. The CLI is deterministic plumbing — no LLM, no network — that produces and moves
+> structured files. The verbs `scan` / `detect` / `emit` are **optional accelerators** the agent may
+> invoke, never a mandatory pipeline or the source of truth.
+
+Everything else follows from that: if an opinion can be supplied by the agent, it is not hardcoded —
+it is exposed as a flag.
+
+## At a glance
+
+```text
+AGENT (protagonist) — reads the repo directly; its understanding is authoritative
+  ├─ scan    (Fase 1, CLI tool)   structure map: tree-sitter + def/ref graph + PageRank
+  ├─ detect  (Fase 2, CLI tool)   reflexion diff: cycles + layer violations + declared boundaries
+  ├─ grill   (Fase 3, the skill)  adjudicate with the user, one question at a time
+  └─ emit    (Fase 4, CLI tool)   the agent writes the prose; the CLI serializes + validates
+```
+
+Phases 1, 2, and 4 are CLI verbs (`src/scanner`, `src/detect`, `src/emit`). Phase 3 is the agent,
+driven by the `extract` Agent Skill (`skills/extract/`). A shared `src/core` holds the `patterns.yaml`
+contract.
+
+---
+
+## Fase 1 — `scan` (`src/scanner/`)
+
+**Why it exists.** Give the agent a token-efficient map of a large repo. It is an accelerator; if it
+disagrees with what the agent reads, the agent's reading wins.
+
+| Module | Key functions | Why |
+| --- | --- | --- |
+| `inventory.ts` | `inventory` (walk to `FolderNode`), `listFiles`, `detectConventions`, `isTestFile`, `assertProjectDir` | Walks the tree once, derives majority-rule conventions (`dir:` / `ext:` / `suffix:`), and decides what is noise. `ALWAYS_SKIP` (build dirs) + a `.gitignore` matcher keep `.next`/`dist` from contaminating the map. |
+| `lang.ts` | `extractTags` (tree-sitter to defs/refs/imports), `langForFile`, `supportedExtensions` | Deterministic parsing engine. `web-tree-sitter` is **pinned to 0.22.6** (ABI). MVP languages: TS / TSX / JS. Caches one parser per language to avoid a WASM leak. |
+| `graph.ts` | `buildGraph` to `FileGraph`, `resolveImport` | The directed graph. `importEdges` = resolved imports only — it drives the detectors and ranking. `resolveImport` walks relative to `tsconfig` aliases to monorepo workspace packages to baseUrl. `RESOLVE_SUFFIXES` is derived from `supportedExtensions()` so it never drifts from the parser. |
+| `pagerank.ts` | `pageRank` (power iteration) | Ranks the real architectural hubs over `importEdges` (not leaf utilities). |
+| `stack.ts` | `detectStack` | Stack tags from `package.json` deps and config markers — a hint, not authority. |
+| `map.ts` | `scanProject` to `ScanFindings` | **The assembler.** dir tree + stack + conventions + ranked files (trimmed to N) + total. Options: `limit` / `conventionsLimit` / `skip`. |
+
+**CLI:** `patterns scan [path]` prints `ScanFindings` JSON.
+
+```sh
+patterns scan .                          # the map of the current repo
+patterns scan . --limit 300 --skip gen   # bigger ranked list; also skip a generated dir
+```
+
+---
+
+## Fase 2 — `detect` (`src/detect/`)
+
+**Why it exists.** Seed the grill with *scored* incongruities. It uses a reflexion model: infer the
+*intended* pattern, then measure the real code against it as **convergence / divergence / absence**.
+Design rule: it emits only **intent-independent, high-signal structural facts**.
+
+| Module | Key functions | Why |
+| --- | --- | --- |
+| `intended.ts` | `inferIntended` to `IntendedPattern` | The baseline: dominant conventions + stack + an inferred layering. Knobs: `dominantShare` / `dominantMinCount` / `minLayers`. |
+| `layers.ts` | `makeLayerModel` / `LayerModel`, `parseLayers`, `fileLayer` / `layerRank` / `isLayerKeyword` / `nameAt`, `singularizeDir` | A **parameterizable** layer vocabulary. The default is backend/DDD (controller/service/repository); `--layers` overrides it (e.g. a Next app: page/component/hook). |
+| `cycles.ts` | `findCycles` (Tarjan SCC) | Import cycles — a global topological fact the LLM misses at scale. Confidence 1 (it is a fact, not a heuristic). |
+| `boundaries.ts` | `findLayerViolations` | Back-edges (inner depends on outer, 0.9) and skip-edges (jumps a layer, 0.6) against the inferred layering. Knob: `maxLayerSkip`. |
+| `declared.ts` | `findBoundaryViolations` (glob from-to), `loadBoundaries`, `globToRegExp` | **The payoff:** enforces the boundary *declared* in the grill (the `boundaries:` block of `patterns.yaml`) against the import graph. Confidence 1. |
+| `findings.ts` | `detectProject` to `DetectFindings` | **The assembler.** Combines cycles + layer violations + boundary violations; excludes tests; `DetectOptions` threads every knob. |
+
+**CLI:** `patterns detect [path]` prints `DetectFindings` JSON.
+
+```sh
+patterns detect .                                            # cycles + layering + auto-read boundaries
+patterns detect . --layers "page,route|component|hook|lib"   # frontend layer vocabulary
+patterns detect . --boundaries ./my-pattern/patterns.yaml    # enforce a declared boundary spec
+```
+
+> **What `detect` deliberately omits.** No coupling/instability metrics. They are blind to intent
+> (a re-export barrel and a god module look identical), so they produce noise that trains the user to
+> ignore the tool. Whether a module "does too much" is the agent's read of the code, not a graph
+> metric's. Intent that matters is **declared** in the grill, not inferred.
+
+---
+
+## Fase 3 — `grill` (`skills/extract/`)
+
+**Why it exists.** The curation *is* the value. This phase is not a CLI verb — it is the agent,
+adjudicating the canonical pattern with the user **one question at a time**, seeded by the surviving
+incongruities.
+
+- `SKILL.md` — the orchestrator (the scope choice + the four phases; `disable-model-invocation: true`, user-invoked).
+- `grilling.md` — the grill rules (one question at a time, codebase-first, the five maneuvers).
+- `GENERALIZATION.md` — the shareable contract (scrub business names, rename entities to roles) applied
+  when the scope is `shareable`.
+- `CONTEXT-FORMAT.md` / `ADR-FORMAT.md` — the formats for the glossary and ADRs it materializes onto
+  the user's repo.
+
+Before the phases the skill settles the **scope**: `internal` (a house pattern, domain-rich) or
+`shareable` (domain-agnostic, publishable), recorded as `scope` in `patterns.yaml`. As decisions
+crystallize the agent materializes `CONTEXT.md` + ADRs, and **captures the declared boundaries** that
+`detect` then enforces.
+
+---
+
+## Fase 4 — `emit` (`src/emit/` + `src/core/`)
+
+**Why it exists.** The **agent writes the prose**; the CLI serializes the structure and validates. It
+never auto-generates an uncurated bundle (an auto-generated bundle performs worse than none).
+
+- `emit/bundle.ts` — `emitBundle`: scaffolds the dir, `serializeManifest` (`patterns.yaml`), then
+  `validatePattern` to `Issue[]`.
+- `cli/emit.ts` — reads the manifest JSON from **stdin** (an `isTTY` guard prevents a silent hang),
+  calls `emitBundle`, and prints an inventory line (`name@version (scope) — N structure / N rules / ... / N boundaries -> dir`).
+  The manifest carries `scope: internal | shareable` (default `internal`); emit tags the bundle with it
+  and reminds the author that a `shareable` bundle is the one `publish` will accept.
+
+```sh
+cat manifest.json | patterns emit ./my-pattern    # scaffold + write patterns.yaml + validate
+patterns validate ./my-pattern                     # confirm every indexed path exists
+```
+
+---
+
+## CLI utilities
+
+The transverse change: the CLI went from "no flags" to a parameterized surface with descriptive help,
+because the agent is not dumb — it knows what to ignore. With no flags, behavior is unchanged.
+
+### `cli/args.ts` — the parser
+
+Takes policy out of hardcoded constants (what to skip, how many to rank, which layers) and hands it
+to the agent.
+
+- `parseArgs(args, { booleans })` returns `{ positionals, flags }`. Boolean flags are **declared** so
+  they do not greedily consume the next positional (`detect --include-tests .` must not read `.` as
+  the flag's value).
+- Typed getters: `firstPositional`, `strFlag`, `listFlag` (comma-split), `numFlag` (validated, with
+  overloads for an optional default — throws a clear error on `--limit abc`), `boolFlag`.
+
+### `cli/help.ts` — descriptive help
+
+- `USAGE` — the global synopsis (command list + "run `patterns <command> --help`").
+- `COMMAND_HELP` — a per-command page documenting **every flag with its default**, the arguments, and
+  notes. The discovery verbs `find` / `update` / `publish` are documented there too.
+
+### `cli/index.ts` — the dispatcher
+
+`run(argv)` handles global help (no command, or `-h` / `--help`), then per-command help
+(`<command> --help` prints its page **before the command touches stdin or disk** — which killed the
+misleading `not a directory: --help`), then a `switch` over the ten commands.
+
+### Flags reference
+
+Every flag has a default equal to the prior behavior, documented in `patterns <command> --help`.
+
+```text
+scan [path]
+  --limit <n>                max PageRank-ranked files in the map        (default 100)
+  --conventions-limit <n>    max convention signals emitted              (default 50)
+  --skip <name,...>          extra directory names to skip (additive)
+
+detect [path]
+  --layers "<g1|g2|...>"     override the layer vocabulary (outer->inner; synonyms by comma)
+  --max-layer-skip <n>       allowed inward layer distance before "skips a layer"  (default 1)
+  --dominant-share <0..1>    min family share for a dominant convention   (default 0.2)
+  --dominant-min-count <n>   min absolute count for a dominant convention (default 3)
+  --min-layers <n>           min distinct layers before a layering is inferred (default 2)
+  --top-conventions <n>      dominant conventions summarized in convergences  (default 6)
+  --test-dir <name,...>      extra directory names treated as tests (additive)
+  --include-tests            analyze test files too (default: excluded)
+  --skip <name,...>          extra directory names to skip (additive)
+  --boundaries <file>        a patterns.yaml whose boundaries: block is enforced
+                             (defaults to an auto-read patterns.yaml at the repo root)
+
+init <name>
+  --version <semver>         starting manifest version                    (default 0.1.0)
+  --description <text>       one-line description                         (default: a TODO placeholder)
+```
+
+**Kept internal on purpose** (exposing them only breaks things): the PageRank damping factor, the
+tree-sitter queries, the bundle layout (`.patterns/`, `patterns.yaml`, `AGENTS.md`, the four
+sections), the path-safety invariants of `validate`, and the git ref grammar. **Deferred:**
+`--router` / the install dir (changing them per-invocation desynchronizes `remove` / `list` without
+persistent project config).
+
+---
+
+## Design rationale — why it is shaped this way
+
+1. **Layers by phase + a shared core.** `scanner` = Fase 1, `detect` = Fase 2, `emit` = Fase 4. Each
+   phase is independently testable, and a later split into a monorepo is mechanical.
+2. **Imports-only edges** (`importEdges`). Detectors and ranking use resolved imports — a clean signal.
+   Name-reference edges were removed entirely: they inflated false hubs and false cycles, and no
+   consumer used them.
+3. **`detect` emits only intent-independent facts.** A detector that is wrong two-thirds of the time
+   trains the user to ignore it and poisons the grill it feeds. Intent is **declared** (boundaries in
+   the grill), not inferred.
+4. **The CLI never writes prose and never decides.** `emit` serializes and validates; the prose and
+   the adjudication are the agent's. The intelligence lives where the user already pays for it.
+
+---
+
+## Supporting layers (context, not part of `extract`)
+
+- **`core/`** — the `patterns.yaml` contract: `schema.ts` (`PatternManifest` incl. `scope` + `boundarySchema`),
+  `parse.ts` (`parseManifest` / `serializeManifest`), `bundle.ts` (layout constants), `validate.ts`
+  (`validatePattern` checks required files + a path-confined, existing rich index).
+- **`registry/`** — git-native transport:
+  `GitSource.resolve` / `parseRef`, `listInstalled`; discovery (`find`/`publish`) is a thin client to the hosted patterns.directory API. `publish` refuses an `internal`-scope pattern (a local scope guard) before POSTing the ref.
+- **`artifact/`** — materializes a pattern into a target repo, descriptively: `materialize`
+  (`.patterns/<name>/`), `writeRouter` (root `AGENTS.md`), `unmaterialize`.
+
+## See also
+
+- [CONTEXT.md](../CONTEXT.md) — the glossary (canonical vocabulary)
+- [ARCHITECTURE.md](../ARCHITECTURE.md) — the implementation map (modules + method surface)
+- [skills/extract/SKILL.md](../skills/extract/SKILL.md) — the orchestrating Agent Skill

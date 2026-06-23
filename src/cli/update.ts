@@ -1,7 +1,7 @@
 import { GitSource } from "../registry/git-source";
 import { validatePattern } from "../core/validate";
 import { materialize, writeOrigin } from "../artifact/materialize";
-import { writeRouter } from "../artifact/router";
+import { syncAgents } from "../artifact/router";
 import { listInstalled, type InstalledPattern } from "../registry/installed";
 
 /**
@@ -51,7 +51,7 @@ export async function update(name: string | undefined, cwd = process.cwd()): Pro
     console.log(versionLine(target, fresh.manifest.version));
   }
 
-  if (changed) writeRouter(cwd);
+  if (changed) syncAgents(cwd);
 }
 
 function versionLine(prev: InstalledPattern, nextVersion: string): string {

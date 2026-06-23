@@ -1,7 +1,7 @@
 import type { Pattern } from "../core/schema";
 
 /**
- * The seam that keeps distribution swappable (ADR-0001).
+ * The seam that keeps distribution swappable.
  *
  * v1 ships only GitSource. A hosted index (ApiSource) can implement the same
  * interface later without touching the Scanner or Artifact layers.

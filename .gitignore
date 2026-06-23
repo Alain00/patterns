@@ -1,5 +1,6 @@
-.docs
 node_modules
 dist
 *.log
 .claude
+tmp/
+**/.DS_Store

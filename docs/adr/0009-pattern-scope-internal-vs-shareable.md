@@ -1,0 +1,11 @@
+# Pattern scope: internal (house) vs shareable (agnostic), enforced at publish
+
+A pattern's `patterns.yaml` carries `scope: internal | shareable`. **`internal`** is a *house pattern* — it may name concrete domain concepts (entities, services, product/team names) because that richness is what keeps one codebase consistent. **`shareable`** is the architecture as an *agnostic layer* — roles and shapes only, safe to distribute. The `extract` skill asks the scope up front (SKILL.md §0); a `shareable` bundle obeys `skills/extract/GENERALIZATION.md` (scrub business names, rename entities to roles, recipes become templates). `emit` tags the bundle with its scope; `publish` refuses an `internal`-scope pattern (override with `--force`). The field defaults to `internal`.
+
+We chose a machine-readable `scope` field plus a publish guard over the two alternatives: (a) a skill-only convention (the skill asks and writes accordingly, but the manifest has no field and nothing is enforced), and (b) an always-agnostic bundle with a separate, never-published domain overlay. Skill-only leaves "agnostic vs house" as agent vibes the next run forgets — nothing then stops an un-generalized house pattern (business names, internal service names) from being published, which is the exact failure that makes a *shared* pattern worthless. A field makes the intent durable and enforceable; defaulting to `internal` makes the safe state the default, so a pattern is published on purpose, never by omission. The overlay model is arguably cleaner long-term but changes the bundle layout (a second, non-shipped tree); it is deferred, not adopted.
+
+This is worth recording because it is hard to reverse and surprising. `scope` is now part of the published manifest contract that patterns.directory reads, and the `internal` default means every pre-scope pattern reads as `internal` — safe, but each must be deliberately re-marked to become publishable. A future contributor will also wonder why `publish` refuses *your own* pattern by default; the guard is intentional, not a bug. Generalizing an `internal` bundle into a `shareable` one is a **skill flow**, not a CLI transform — the judgment of what counts as "business" is the agent's, consistent with ADR-0003 (the CLI is LLM-free; the agent is the intelligence).
+
+## Status
+
+accepted

@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { $ } from "bun";
 import { MANIFEST_FILE } from "../core/parse";
@@ -36,7 +36,10 @@ export async function detectRef(cwd = process.cwd()): Promise<string> {
     );
   }
 
-  const sub = relative(root, manifestDir).split(sep).join("/");
+  // `root` comes from git (canonical, symlinks resolved); canonicalize the manifest dir
+  // too so `relative` is empty at the root rather than a "../private/..." mismatch on
+  // platforms where the temp/home path is a symlink (e.g. macOS /var → /private/var).
+  const sub = relative(root, realpathSync(manifestDir)).split(sep).join("/");
   return sub ? `${ownerRepo}/${sub}` : ownerRepo;
 }
 
@@ -65,12 +68,16 @@ export function parseOriginUrl(url: string): string | null {
   return `${match[1]}/${match[2]}`;
 }
 
-/** Walk up from cwd to the repo root looking for the directory that holds patterns.yaml. */
-function findManifestDir(cwd: string, root: string): string | null {
+/**
+ * Walk up from `cwd` looking for the directory that holds patterns.yaml. Stops at
+ * `stop` (e.g. the git root) when given, otherwise at the filesystem root. Exported
+ * so `publish`'s scope guard can read the local bundle on the inferred-ref path.
+ */
+export function findManifestDir(cwd: string, stop?: string): string | null {
   let dir = cwd;
   while (true) {
     if (existsSync(join(dir, MANIFEST_FILE))) return dir;
-    if (dir === root) return null;
+    if (dir === stop) return null;
     const parent = dirname(dir);
     if (parent === dir) return null;
     dir = parent;

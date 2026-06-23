@@ -5,7 +5,7 @@ import type { Pattern } from "../core/schema";
 
 /**
  * Write a pattern's knowledge bundle into a target project — DESCRIPTIVE ONLY.
- * Copies the bundle to <project>/.patterns/<name>/ and never touches src/ (ADR-0002).
+ * Copies the bundle to <project>/.patterns/<name>/ and never touches src/.
  *
  * Clean overwrite: any previous install of the same pattern is removed first, so
  * re-installs and `update` never leave orphaned files behind. Returns the install
